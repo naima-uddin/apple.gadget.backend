@@ -548,7 +548,7 @@ router.post(
               cloudinary.uploader
                 .upload_stream(
                   {
-                    folder: `${process.env.CLOUDINARY_FOLDER || "Pickob"}/reviews`,
+                    folder: `${process.env.CLOUDINARY_FOLDER || "appleProduct"}/reviews`,
                     quality: "auto",
                     fetch_format: "auto",
                   },
@@ -998,7 +998,7 @@ router.post(
         new Promise((resolve, reject) => {
           const stream = cloudinary.uploader.upload_stream(
             {
-              folder: `${process.env.CLOUDINARY_FOLDER || "Pickob"}/products`,
+              folder: `${process.env.CLOUDINARY_FOLDER || "appleProduct"}/products`,
               resource_type: "image",
             },
             (error, result) => {

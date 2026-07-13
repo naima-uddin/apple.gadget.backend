@@ -18,7 +18,7 @@ import { v2 as cloudinary } from "cloudinary";
 import https from "https";
 
 const MONGO_URI = process.env.MONGODB_URI;
-const CLOUDINARY_FOLDER = process.env.CLOUDINARY_FOLDER || "Pickob";
+const CLOUDINARY_FOLDER = process.env.CLOUDINARY_FOLDER || "appleProduct";
 
 // ── mongoose connection ───────────────────────────────────────
 await mongoose.connect(MONGO_URI);

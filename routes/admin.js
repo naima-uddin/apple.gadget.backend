@@ -223,7 +223,7 @@ router.get("/upload/sign", requireAdmin, (req, res) => {
     const timestamp = Math.round(Date.now() / 1000);
     const folder = String(
       req.query.folder ||
-        `${process.env.CLOUDINARY_FOLDER || "Pickob"}/products`,
+        `${process.env.CLOUDINARY_FOLDER || "appleProduct"}/products`,
     );
     const paramsToSign = { folder, timestamp };
     const signature = cloudinary.utils.api_sign_request(
@@ -269,7 +269,7 @@ router.post(
       const folder =
         req.body.folder ||
         req.query.folder ||
-        `${process.env.CLOUDINARY_FOLDER || "Pickob"}/media`;
+        `${process.env.CLOUDINARY_FOLDER || "appleProduct"}/media`;
 
       // Detect if file is a video based on mimetype
       const isVideo = req.file.mimetype.startsWith("video/");

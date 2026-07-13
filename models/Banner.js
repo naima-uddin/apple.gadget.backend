@@ -2,11 +2,13 @@ import mongoose from 'mongoose';
 
 const BannerSchema = new mongoose.Schema({
   image:      { url: { type: String, default: '' }, public_id: { type: String, default: '' } },
-  title:      { type: String, default: '' },
-  subtitle:   { type: String, default: '' },
-  buttonText: { type: String, default: 'Order Now' },
+  title:      { type: String, default: '' },   // left side big title, e.g. "Sound Max Pro"
+  subtitle:   { type: String, default: '' },   // left side description
+  buttonText: { type: String, default: 'Shop Now' },
   buttonLink: { type: String, default: '/' },
-  badge:      { type: String, default: '' },   // e.g. "FREE DELIVERY", "SAVE UP TO 20%"
+  badge:      { type: String, default: '' },   // small tagline above left title, e.g. "Feel the Music with"
+  rightTitle: { type: String, default: '' },   // right side big title, e.g. "Bass Blaster X7"
+  rightText:  { type: String, default: '' },   // right side description
   isActive:   { type: Boolean, default: true },
   order:      { type: Number, default: 0 },
   createdAt:  { type: Date, default: Date.now },

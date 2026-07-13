@@ -31,7 +31,7 @@ const signUpload = (req, res) => {
   try {
     ensureCloudinaryConfigured();
     const timestamp = Math.round(Date.now() / 1000);
-    const base = process.env.CLOUDINARY_FOLDER || "Pickob";
+    const base = process.env.CLOUDINARY_FOLDER || "appleProduct";
     const allowed = [`${base}/profiles`, `${base}/reviews`];
     const requested = String(req.query.folder || "");
     const folder = allowed.includes(requested) ? requested : `${base}/profiles`;
@@ -142,7 +142,7 @@ router.put(
           new Promise((resolve, reject) => {
             const stream = cloudinary.uploader.upload_stream(
               {
-                folder: `${process.env.CLOUDINARY_FOLDER || 'Pickob'}/profiles`,
+                folder: `${process.env.CLOUDINARY_FOLDER || 'appleProduct'}/profiles`,
                 resource_type: "image",
               },
               (error, result) => {

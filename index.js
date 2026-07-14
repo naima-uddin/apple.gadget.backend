@@ -419,6 +419,41 @@ app.get("/api/deal-of-day", async (req, res) => {
   }
 });
 
+// Public: homepage bento category showcase.
+// Prefers admin-built custom tiles (image + label + link); falls back to the
+// legacy category-based slots if no tiles are configured.
+app.get("/api/category-showcase", async (req, res) => {
+  try {
+    const { default: Setting } = await import("./models/Setting.js");
+    const s = await Setting.findOne().lean();
+    const cfg = s?.categoryShowcase || {};
+
+    const tiles = (cfg.tiles || []).filter(
+      (t) => t && (t.image?.url || t.label),
+    );
+    if (tiles.length > 0)
+      return res.json({ title: cfg.title || "", tiles, categories: [] });
+
+    const ids = (cfg.categoryIds || []).map(String);
+    if (ids.length === 0)
+      return res.json({ title: cfg.title || "", tiles: [], categories: [] });
+    const { default: Category } = await import("./models/Category.js");
+    const cats = await Category.find({ _id: { $in: ids } })
+      .select("name nameBn slug images")
+      .lean();
+    // preserve the slot order picked in the dashboard
+    const byId = Object.fromEntries(cats.map((c) => [String(c._id), c]));
+    const ordered = ids.map((id) => byId[id]).filter(Boolean);
+    res.json({
+      title: cfg.title || "Shop by Category",
+      tiles: [],
+      categories: ordered,
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 // Public: list active banner slides (used by homepage)
 app.get("/api/banners", async (req, res) => {
   try {

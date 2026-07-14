@@ -217,6 +217,24 @@ const SettingsSchema = new mongoose.Schema({
     privacy: { type: [PolicySectionSchema], default: [] },
     terms: { type: [PolicySectionSchema], default: [] },
   },
+  // homepage bento category showcase — 6 slots: [left big, 4 small, right big]
+  categoryShowcase: {
+    title: { type: String, default: "Shop by Category" },
+    // legacy: category-based slots (kept for backward compat)
+    categoryIds: [{ type: mongoose.Schema.Types.ObjectId, ref: "Category" }],
+    // custom tiles: admin-uploaded image + label + link per slot
+    tiles: [
+      {
+        image: {
+          url: { type: String, default: "" },
+          public_id: { type: String, default: "" },
+        },
+        label: { type: String, default: "" },
+        link: { type: String, default: "/" },
+        _id: false,
+      },
+    ],
+  },
   updatedAt: { type: Date, default: Date.now },
 });
 

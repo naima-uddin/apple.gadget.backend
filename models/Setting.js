@@ -229,6 +229,12 @@ const SettingsSchema = new mongoose.Schema({
     privacy: { type: [PolicySectionSchema], default: [] },
     terms: { type: [PolicySectionSchema], default: [] },
   },
+  // homepage "Deal of the Day" — admin-selected product
+  dealOfDayProductId: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: "Product",
+    default: null,
+  },
   // homepage bento category showcase — each page has 6 slots:
   // [left big, 4 small in the middle, right big]; multiple pages = slider
   categoryShowcase: {

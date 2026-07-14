@@ -61,6 +61,7 @@ router.get("/", async (req, res) => {
   try {
     const {
       q,
+      suggest,
       categoryId,
       badge,
       flag,
@@ -112,10 +113,24 @@ router.get("/", async (req, res) => {
     };
     if (flag && FLAG_MAP[flag]) filter[FLAG_MAP[flag]] = true;
     if (q) {
-      // Use the pre-built text index (title + description + ingredients.inciName)
-      // for O(log n) lookup — regex does a full O(n) collection scan.
-      // Input capped at 200 chars; $text is injection-safe.
-      filter.$text = { $search: String(q).slice(0, 200) };
+      if (suggest) {
+        // Autocomplete mode: partial, case-insensitive match so half-typed
+        // words still hit ("iph" → "iPhone"). $text only matches whole words.
+        const qEsc = String(q)
+          .trim()
+          .slice(0, 200)
+          .replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        filter.$or = [
+          { title: { $regex: qEsc, $options: "i" } },
+          { tags: { $regex: qEsc, $options: "i" } },
+          { department: { $regex: qEsc, $options: "i" } },
+        ];
+      } else {
+        // Use the pre-built text index (title + description + ingredients.inciName)
+        // for O(log n) lookup — regex does a full O(n) collection scan.
+        // Input capped at 200 chars; $text is injection-safe.
+        filter.$text = { $search: String(q).slice(0, 200) };
+      }
     }
 
     if (minPrice !== undefined || maxPrice !== undefined) {
@@ -177,7 +192,8 @@ router.get("/", async (req, res) => {
     let sortBy = sortMap[sort] || sortMap.position;
     // When text search is active and no explicit sort was requested, rank by
     // relevance score rather than recency so the best matches surface first.
-    if (q && sort === "position") sortBy = { score: { $meta: "textScore" } };
+    if (q && !suggest && sort === "position")
+      sortBy = { score: { $meta: "textScore" } };
 
     // Try cache
     const cacheKey = `products:${Buffer.from(JSON.stringify(req.query || {})).toString("base64")}`;

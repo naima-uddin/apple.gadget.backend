@@ -420,34 +420,48 @@ app.get("/api/deal-of-day", async (req, res) => {
 });
 
 // Public: homepage bento category showcase.
-// Prefers admin-built custom tiles (image + label + link); falls back to the
-// legacy category-based slots if no tiles are configured.
+// Always returns { pages: [{ title, tiles: [{image, label, link}] }] } —
+// legacy single-page configs (tiles / categoryIds) are normalized into one page.
 app.get("/api/category-showcase", async (req, res) => {
   try {
     const { default: Setting } = await import("./models/Setting.js");
     const s = await Setting.findOne().lean();
     const cfg = s?.categoryShowcase || {};
 
-    const tiles = (cfg.tiles || []).filter(
-      (t) => t && (t.image?.url || t.label),
-    );
-    if (tiles.length > 0)
-      return res.json({ title: cfg.title || "", tiles, categories: [] });
+    const validTiles = (arr) =>
+      (arr || []).filter((t) => t && (t.image?.url || t.label));
 
+    // current format: multiple pages
+    const pages = (cfg.pages || [])
+      .map((p) => ({ title: p.title || "", tiles: validTiles(p.tiles) }))
+      .filter((p) => p.tiles.length > 0);
+    if (pages.length > 0) return res.json({ pages });
+
+    // legacy: single-page custom tiles
+    const tiles = validTiles(cfg.tiles);
+    if (tiles.length > 0)
+      return res.json({ pages: [{ title: cfg.title || "", tiles }] });
+
+    // legacy: category-based slots
     const ids = (cfg.categoryIds || []).map(String);
-    if (ids.length === 0)
-      return res.json({ title: cfg.title || "", tiles: [], categories: [] });
+    if (ids.length === 0) return res.json({ pages: [] });
     const { default: Category } = await import("./models/Category.js");
     const cats = await Category.find({ _id: { $in: ids } })
-      .select("name nameBn slug images")
+      .select("name slug images")
       .lean();
-    // preserve the slot order picked in the dashboard
     const byId = Object.fromEntries(cats.map((c) => [String(c._id), c]));
-    const ordered = ids.map((id) => byId[id]).filter(Boolean);
+    const catTiles = ids
+      .map((id) => byId[id])
+      .filter(Boolean)
+      .map((c) => ({
+        image: { url: (c.images && c.images[0] && c.images[0].url) || "" },
+        label: c.name || "",
+        link: `/category/${c.slug || ""}/`,
+      }));
     res.json({
-      title: cfg.title || "Shop by Category",
-      tiles: [],
-      categories: ordered,
+      pages: catTiles.length
+        ? [{ title: cfg.title || "Shop by Category", tiles: catTiles }]
+        : [],
     });
   } catch (err) {
     res.status(500).json({ error: "Server error" });

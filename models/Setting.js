@@ -38,6 +38,18 @@ const PolicySectionSchema = new mongoose.Schema(
   { _id: false },
 );
 
+const ShowcaseTileSchema = new mongoose.Schema(
+  {
+    image: {
+      url: { type: String, default: "" },
+      public_id: { type: String, default: "" },
+    },
+    label: { type: String, default: "" },
+    link: { type: String, default: "/" },
+  },
+  { _id: false },
+);
+
 const SettingsSchema = new mongoose.Schema({
   storeName: { type: String, default: "Pickob" },
   storeEmail: { type: String, default: "" },
@@ -217,22 +229,22 @@ const SettingsSchema = new mongoose.Schema({
     privacy: { type: [PolicySectionSchema], default: [] },
     terms: { type: [PolicySectionSchema], default: [] },
   },
-  // homepage bento category showcase — 6 slots: [left big, 4 small, right big]
+  // homepage bento category showcase — each page has 6 slots:
+  // [left big, 4 small in the middle, right big]; multiple pages = slider
   categoryShowcase: {
+    // legacy single-page fields (kept for backward compat)
     title: { type: String, default: "Shop by Category" },
-    // legacy: category-based slots (kept for backward compat)
     categoryIds: [{ type: mongoose.Schema.Types.ObjectId, ref: "Category" }],
-    // custom tiles: admin-uploaded image + label + link per slot
-    tiles: [
-      {
-        image: {
-          url: { type: String, default: "" },
-          public_id: { type: String, default: "" },
+    tiles: [ShowcaseTileSchema],
+    // current format: multiple showcase pages
+    pages: [
+      new mongoose.Schema(
+        {
+          title: { type: String, default: "" },
+          tiles: [ShowcaseTileSchema],
         },
-        label: { type: String, default: "" },
-        link: { type: String, default: "/" },
-        _id: false,
-      },
+        { _id: false },
+      ),
     ],
   },
   updatedAt: { type: Date, default: Date.now },

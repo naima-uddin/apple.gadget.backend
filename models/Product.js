@@ -46,7 +46,6 @@ const ProductSchema = new mongoose.Schema(
     categoryId: { type: mongoose.Schema.Types.ObjectId, ref: "Category" },
     department: { type: String }, // Brand/department (e.g., ryans, asus, cosrx)
     productType: { type: String, enum: ['general', 'skincare', 'electronics'], default: 'general' },
-    tags: [{ type: String }],
     // admin-visible badges (e.g. best_seller, hot, new_arrival)
     badges: [{ type: String, trim: true, lowercase: true, default: [] }],
     // category-specific structured fields (brand, specs, material, sizes, etc.)
@@ -163,38 +162,6 @@ const ProductSchema = new mongoose.Schema(
         attributes: [{ key: String, value: String }],
       },
     ], // e.g., { level: 'Connectivity', attributes: [{ key: 'Bluetooth', value: 'V5.3' }] }
-    // customisation options that customers can pick
-    customization: {
-      customizable: { type: Boolean, default: false },
-      // `type` is a valid field name, but Mongoose treats it specially when
-      // we use the shorthand object notation inside an array.  The original
-      // inline definition caused the schema to be interpreted as
-      // `options: [String]`, which in turn led to the "Cast to [string] failed"
-      // error when we tried to save an object.  To avoid the ambiguity we
-      // explicitly build a sub‑schema below.
-      options: [
-        new mongoose.Schema(
-          {
-            name: String,
-            type: String, // e.g. "text", "select", etc.
-            values: [String],
-          },
-          { _id: false },
-        ),
-      ],
-    },
-
-    // warranty & return policy
-    warranty: {
-      period: { type: String },
-      details: { type: String },
-      provider: { type: String },
-    },
-    returnPolicy: {
-      days: { type: Number },
-      refundable: { type: Boolean, default: true },
-      details: { type: String },
-    },
 
     // reviews & rating
     reviews: [

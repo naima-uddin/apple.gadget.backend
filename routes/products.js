@@ -51,7 +51,7 @@ const CARD_SELECT = [
   "availability inventory badges averageRating reviewCount",
   "freeShipping flashSale flashSalePrice flashSaleEndsAt",
   "variants categoryId department status updatedAt monthlySold",
-  "coupon featured clearance tags rewardPoints",
+  "coupon featured clearance rewardPoints",
   "skinTypes spf fragranceFree parabenFree crueltyFree vegan",
 ].join(" ");
 
@@ -65,7 +65,6 @@ router.get("/", async (req, res) => {
       categoryId,
       badge,
       flag,
-      tag,
       page = 1,
       limit = 20,
       status = "published",
@@ -97,12 +96,6 @@ router.get("/", async (req, res) => {
       else if (ids.length > 1) filter.categoryId = { $in: ids };
     }
     if (badge) filter.badges = badge;
-    if (tag) {
-      const tagVal = String(tag)
-        .trim()
-        .replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-      filter.tags = { $regex: tagVal, $options: "i" };
-    }
     // boolean flag fields — whitelist to prevent injection
     const FLAG_MAP = {
       featured: "featured",
@@ -122,7 +115,6 @@ router.get("/", async (req, res) => {
           .replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
         filter.$or = [
           { title: { $regex: qEsc, $options: "i" } },
-          { tags: { $regex: qEsc, $options: "i" } },
           { department: { $regex: qEsc, $options: "i" } },
         ];
       } else {

@@ -1359,21 +1359,6 @@ router.post(
       // already in the front end but ensures the server doesn't crash if a bad
       // payload slips through.
 
-      // parse customization options if they accidentally arrive as a JSON
-      // string (happened previously when the schema mis‑interpreted the type)
-      if (
-        payload.customization &&
-        typeof payload.customization.options === "string"
-      ) {
-        try {
-          payload.customization.options = JSON.parse(
-            payload.customization.options,
-          );
-        } catch {
-          // leave it alone; the validator below will catch it
-        }
-      }
-
       // make sure each variant has a numeric price; respond with 400 if not.
       if (Array.isArray(payload.variants)) {
         for (const v of payload.variants) {
@@ -1480,20 +1465,6 @@ router.put(
       const updates = req.body || {};
       if (updates.faqs) updates.faqs = normalizeFaqs(updates.faqs);
       const nextBarcode = normalizeBarcodeCode(updates.barcode);
-
-      // parse stringified customization options if needed
-      if (
-        updates.customization &&
-        typeof updates.customization.options === "string"
-      ) {
-        try {
-          updates.customization.options = JSON.parse(
-            updates.customization.options,
-          );
-        } catch {
-          // let validation catch it
-        }
-      }
 
       // variant sanity check (same as POST)
       if (Array.isArray(updates.variants)) {

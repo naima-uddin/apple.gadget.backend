@@ -307,16 +307,21 @@ app.get("/api/featured", async (req, res) => {
       .sort({ order: 1, createdAt: 1 })
       .lean();
 
-    // Batch all explicit IDs into one query, category sections in parallel
+    // Batch all explicit IDs into one query, category sections in parallel.
+    // Video sections contribute the productIds linked to their video cards.
     const explicitIds = [
       ...new Set(
-        sections
-          .filter((s) => s.productIds?.length > 0)
-          .flatMap((s) => s.productIds.map((id) => id.toString())),
+        sections.flatMap((s) =>
+          s.type === "video"
+            ? (s.videos || [])
+                .map((v) => v.productId?.toString())
+                .filter(Boolean)
+            : (s.productIds || []).map((id) => id.toString()),
+        ),
       ),
     ];
     const categorySections = sections.filter(
-      (s) => !s.productIds?.length && s.categoryId,
+      (s) => s.type !== "video" && !s.productIds?.length && s.categoryId,
     );
 
     const [explicitProds, ...catProdArrays] = await Promise.all([
@@ -342,6 +347,18 @@ app.get("/api/featured", async (req, res) => {
     );
     let catIdx = 0;
     const result = sections.map((sec) => {
+      if (sec.type === "video") {
+        return {
+          ...sec,
+          products: [],
+          videos: (sec.videos || []).map((v) => ({
+            ...v,
+            product: v.productId
+              ? explicitMap[v.productId.toString()] || null
+              : null,
+          })),
+        };
+      }
       if (sec.productIds?.length > 0) {
         const idOrder = sec.productIds.map((id) => id.toString());
         return {
@@ -580,15 +597,20 @@ app.get("/api/homepage", async (req, res) => {
     // Hydrate featured sections — batched to avoid N+1 queries.
     // Explicit-productId sections: ONE query for all IDs combined.
     // Category sections: one query per unique category, all in parallel.
+    // Video sections contribute the productIds linked to their video cards.
     const explicitIds = [
       ...new Set(
-        featuredSections
-          .filter((s) => s.productIds?.length > 0)
-          .flatMap((s) => s.productIds.map((id) => id.toString())),
+        featuredSections.flatMap((s) =>
+          s.type === "video"
+            ? (s.videos || [])
+                .map((v) => v.productId?.toString())
+                .filter(Boolean)
+            : (s.productIds || []).map((id) => id.toString()),
+        ),
       ),
     ];
     const categorySections = featuredSections.filter(
-      (s) => !s.productIds?.length && s.categoryId,
+      (s) => s.type !== "video" && !s.productIds?.length && s.categoryId,
     );
 
     const [explicitProds, ...catProdArrays] = await Promise.all([
@@ -615,6 +637,18 @@ app.get("/api/homepage", async (req, res) => {
     let catIdx = 0;
 
     const featured = featuredSections.map((sec) => {
+      if (sec.type === "video") {
+        return {
+          ...sec,
+          products: [],
+          videos: (sec.videos || []).map((v) => ({
+            ...v,
+            product: v.productId
+              ? explicitMap[v.productId.toString()] || null
+              : null,
+          })),
+        };
+      }
       if (sec.productIds?.length > 0) {
         const idOrder = sec.productIds.map((id) => id.toString());
         const products = idOrder.map((id) => explicitMap[id]).filter(Boolean);

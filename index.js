@@ -293,7 +293,7 @@ const HOMEPAGE_PRODUCT_SELECT = [
   "_id title slug price compareAtPrice images",
   "availability inventory badges averageRating reviewCount",
   "freeShipping flashSale flashSalePrice flashSaleEndsAt",
-  "variants categoryId status updatedAt monthlySold coupon",
+  "variants category categoryId status updatedAt monthlySold coupon",
 ].join(" ");
 
 // Public: list active featured sections with populated products (used by homepage)

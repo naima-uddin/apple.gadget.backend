@@ -9,6 +9,9 @@ const CarouselVideoSchema = new mongoose.Schema(
     public_id: { type: String, default: '' },  // Cloudinary public_id (uploaded files)
     youtubeId: { type: String, default: '' },  // set instead of url for YouTube links
     productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', default: null },
+    // Seconds into the video whose frame is shown while the card is paused
+    // (uploaded videos only — YouTube cards always show their thumbnail)
+    previewTime: { type: Number, default: 0, min: 0 },
   },
   { _id: false },
 );

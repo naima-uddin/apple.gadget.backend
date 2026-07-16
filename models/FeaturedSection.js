@@ -19,7 +19,9 @@ const CarouselVideoSchema = new mongoose.Schema(
 const FeaturedSectionSchema = new mongoose.Schema({
   // 'products' = product carousel (default), 'video' = shoppable video carousel
   type:        { type: String, enum: ['products', 'video'], default: 'products' },
-  title:       { type: String, required: true },   // e.g. "Eid Fest on Smart Televisions!"
+  // e.g. "Eid Fest on Smart Televisions!" — not shown/asked for video carousels,
+  // which use the tagline (subtitle) as their heading instead.
+  title:       { type: String, required: function () { return this.type !== 'video'; }, default: '' },
   titleBn:     { type: String, default: '' },      // Bangla title
   // Small tagline above the title (video sections), e.g. "THIS IS HOW BEAUTY LOOKS LIKE"
   subtitle:    { type: String, default: '' },

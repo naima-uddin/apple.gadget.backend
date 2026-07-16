@@ -2967,6 +2967,11 @@ router.post(
       const FeaturedSection = (await import("../models/FeaturedSection.js"))
         .default;
       const payload = req.body || {};
+      // Video carousels don't collect a title from the admin — use the
+      // tagline (subtitle) as their heading instead.
+      if (payload.type === "video" && !payload.title) {
+        payload.title = payload.subtitle || "Video Carousel";
+      }
       const last = await FeaturedSection.findOne().sort({ order: -1 });
       payload.order = last ? last.order + 1 : 0;
       const section = new FeaturedSection(payload);
@@ -3006,6 +3011,9 @@ router.put(
       const FeaturedSection = (await import("../models/FeaturedSection.js"))
         .default;
       const updates = { ...req.body, updatedAt: Date.now() };
+      if (updates.type === "video" && !updates.title) {
+        updates.title = updates.subtitle || "Video Carousel";
+      }
       const section = await FeaturedSection.findByIdAndUpdate(
         req.params.id,
         updates,

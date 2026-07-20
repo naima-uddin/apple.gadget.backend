@@ -514,11 +514,12 @@ app.get("/api/popup", async (req, res) => {
 app.get("/api/discounts", async (req, res) => {
   try {
     const { default: Discount } = await import("./models/Discount.js");
-    const items = await Discount.find({ isActive: true }).sort({
-      order: 1,
-      createdAt: 1,
-    });
-    res.json({ items });
+    const { default: Setting } = await import("./models/Setting.js");
+    const [items, settings] = await Promise.all([
+      Discount.find({ isActive: true }).sort({ order: 1, createdAt: 1 }),
+      Setting.findOne().select("offersTitle"),
+    ]);
+    res.json({ items, offersTitle: settings?.offersTitle || null });
   } catch (err) {
     res.status(500).json({ error: "Server error" });
   }

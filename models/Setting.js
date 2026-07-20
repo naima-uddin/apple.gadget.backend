@@ -262,6 +262,13 @@ const SettingsSchema = new mongoose.Schema({
       default: [],
     },
   },
+  // homepage "Offers" section heading, e.g. "OFFERS! You Can't Miss!!"
+  offersTitle: {
+    highlight: { type: String, default: "OFFERS!" },
+    rest: { type: String, default: "You Can't Miss!!" },
+    highlightBn: { type: String, default: "অফার!" },
+    restBn: { type: String, default: "মিস করবেন না!!" },
+  },
   // homepage "Deal of the Day" — admin-selected product
   dealOfDayProductId: {
     type: mongoose.Schema.Types.ObjectId,

@@ -5,11 +5,14 @@ const DiscountSchema = new mongoose.Schema({
   title:              { type: String, default: '' },
   subtitle:           { type: String, default: '' },
   spend:              { type: String, default: '' },       // e.g. "999 TK" (display text)
-  highlight:          { type: String, default: '' },       // e.g. "Free" or "৳150"
+  highlight:          { type: String, default: '' },       // main card heading, e.g. "Get Extra 15% Off"
   highlightSecondary: { type: String, default: '' },       // optional 2nd line (for 2-line highlights)
   description:        { type: String, default: '' },
   couponCode:         { type: String, default: '' },       // optional coupon code e.g. "SAVE150"
-  theme:              { type: String, default: 'pink' },   // color theme key
+  theme:              { type: String, default: 'pink' },   // legacy color theme key, superseded by bgColor/buttonColor/textColor
+  bgColor:            { type: String, default: '#1D1D1F' }, // card background hex
+  buttonColor:        { type: String, default: '#5B21B6' }, // coupon-code button hex
+  textColor:          { type: String, default: '#FFFFFF' }, // heading/subtitle text hex
   isActive:           { type: Boolean, default: true },
   order:              { type: Number, default: 0 },
 

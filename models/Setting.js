@@ -94,6 +94,13 @@ const SettingsSchema = new mongoose.Schema({
     height: { type: Number },
     format: { type: String, default: "" },
   },
+  websiteFavicon: {
+    public_id: { type: String, default: "" },
+    url: { type: String, default: "" },
+    width: { type: Number },
+    height: { type: Number },
+    format: { type: String, default: "" },
+  },
   megaMenuTags: [
     {
       name: { type: String, trim: true },
@@ -228,6 +235,32 @@ const SettingsSchema = new mongoose.Schema({
     faq: { type: [PolicyItemSchema], default: [] },
     privacy: { type: [PolicySectionSchema], default: [] },
     terms: { type: [PolicySectionSchema], default: [] },
+  },
+  aboutContent: {
+    hero: {
+      title: { type: String, default: "" },
+      description: { type: String, default: "" },
+    },
+    features: {
+      type: [
+        {
+          title: { type: String, default: "" },
+          desc: { type: String, default: "" },
+          _id: false,
+        },
+      ],
+      default: [],
+    },
+    stats: {
+      type: [
+        {
+          value: { type: String, default: "" },
+          label: { type: String, default: "" },
+          _id: false,
+        },
+      ],
+      default: [],
+    },
   },
   // homepage "Deal of the Day" — admin-selected product
   dealOfDayProductId: {

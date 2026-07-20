@@ -373,6 +373,7 @@ router.get("/top-banner", async (req, res) => {
       adsensePublisherId: s?.adsensePublisherId || "",
       adsenseSlot: s?.adsenseSlot || "",
       websiteLogo: s?.websiteLogo || {},
+      websiteFavicon: s?.websiteFavicon || {},
       storeName: s?.storeName || "",
       footerInfo: s?.footerInfo || { phone: "", email: "", address: "" },
       contactInfo: s?.contactInfo || { phone: "", email: "", address: "" },
@@ -389,6 +390,7 @@ router.get("/top-banner", async (req, res) => {
         quickLinks: Array.isArray(s?.footerLinks?.quickLinks) ? s.footerLinks.quickLinks : [],
         customerService: Array.isArray(s?.footerLinks?.customerService) ? s.footerLinks.customerService : [],
       },
+      aboutContent: s?.aboutContent || { hero: {}, features: [], stats: [] },
     });
   } catch (err) {
     res.json({
@@ -398,6 +400,7 @@ router.get("/top-banner", async (req, res) => {
       adsenseEnabled: false,
       adsensePublisherId: "",
       websiteLogo: {},
+      websiteFavicon: {},
       storeName: "",
       footerInfo: { phone: "", email: "", address: "" },
       contactInfo: { phone: "", email: "", address: "" },
@@ -411,6 +414,7 @@ router.get("/top-banner", async (req, res) => {
         terms: [],
       },
       footerLinks: { quickLinks: [], customerService: [] },
+      aboutContent: { hero: {}, features: [], stats: [] },
     });
   }
 });
@@ -510,16 +514,27 @@ router.put("/settings", requireAdmin, async (req, res) => {
   }
 });
 
-// Policy pages content — any authenticated moderator/admin can manage
+// Policy pages content — any authenticated moderator/admin can manage.
+// Accepts any combination of these keys so the dashboard's Policy Pages
+// editor can save footer/contact/about tabs through the same route.
 router.put("/settings/policy", requireAdmin, async (req, res) => {
   try {
-    const { policyContent } = req.body || {};
-    if (!policyContent || typeof policyContent !== "object")
-      return res.status(400).json({ error: "policyContent object required" });
+    const { policyContent, footerInfo, contactInfo, socialLinks, footerLinks, aboutContent } =
+      req.body || {};
+    const $set = {};
+    if (policyContent && typeof policyContent === "object")
+      $set.policyContent = policyContent;
+    if (footerInfo && typeof footerInfo === "object") $set.footerInfo = footerInfo;
+    if (contactInfo && typeof contactInfo === "object") $set.contactInfo = contactInfo;
+    if (socialLinks && typeof socialLinks === "object") $set.socialLinks = socialLinks;
+    if (footerLinks && typeof footerLinks === "object") $set.footerLinks = footerLinks;
+    if (aboutContent && typeof aboutContent === "object") $set.aboutContent = aboutContent;
+    if (Object.keys($set).length === 0)
+      return res.status(400).json({ error: "No valid fields provided" });
     const Setting = (await import("../models/Setting.js")).default;
     const settings = await Setting.findOneAndUpdate(
       {},
-      { $set: { policyContent } },
+      { $set },
       { upsert: true, new: true },
     );
     res.json({ ok: true, settings });

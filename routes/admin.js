@@ -595,9 +595,9 @@ router.get(
       .select("title sku images variants price buyingPrice category status")
       .lean();
 
-    // Aggregate sold units + revenue per product from non-cancelled/returned orders
+    // Aggregate sold units + revenue per product from delivered orders only
     const soldAgg = await Order.aggregate([
-      { $match: { status: { $nin: ["cancelled", "returned"] } } },
+      { $match: { status: "delivered" } },
       { $unwind: "$items" },
       {
         $group: {
@@ -786,8 +786,6 @@ router.get(
   requirePermission("reports.profit"),
   async (req, res) => {
   try {
-    const excludedStatuses = ["cancelled", "returned"];
-
     // Last 24 months
     const fromDate = new Date();
     fromDate.setMonth(fromDate.getMonth() - 23);
@@ -797,7 +795,7 @@ router.get(
     const itemAgg = await Order.aggregate([
       {
         $match: {
-          status: { $nin: excludedStatuses },
+          status: "delivered",
           createdAt: { $gte: fromDate },
         },
       },

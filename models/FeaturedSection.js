@@ -5,9 +5,11 @@ import mongoose from 'mongoose';
 // YouTube video (youtubeId). Each card can link a product shown beneath it.
 const CarouselVideoSchema = new mongoose.Schema(
   {
-    url:       { type: String, default: '' },  // direct/Cloudinary video URL
-    public_id: { type: String, default: '' },  // Cloudinary public_id (uploaded files)
-    youtubeId: { type: String, default: '' },  // set instead of url for YouTube links
+    url:         { type: String, default: '' },  // direct/Cloudinary video URL (uploaded file OR any raw video link)
+    public_id:   { type: String, default: '' },  // Cloudinary public_id (uploaded files)
+    youtubeId:   { type: String, default: '' },  // set instead of url for YouTube links
+    facebookUrl: { type: String, default: '' },  // original Facebook video/reel page URL (rendered via FB's embed plugin)
+    instagramUrl:{ type: String, default: '' },  // ready-to-use Instagram embed URL (…/embed)
     productId: { type: mongoose.Schema.Types.ObjectId, ref: 'Product', default: null },
     // Seconds into the video whose frame is shown while the card is paused
     // (uploaded videos only — YouTube cards always show their thumbnail)

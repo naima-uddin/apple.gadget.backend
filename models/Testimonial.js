@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 
 const TestimonialSchema = new mongoose.Schema({
   name:      { type: String, required: true, trim: true },
+  address:   { type: String, default: '', trim: true },
   message:   { type: String, required: true, trim: true },
   rating:    { type: Number, default: 5, min: 1, max: 5 },
   avatar:    { url: { type: String, default: '' }, public_id: { type: String, default: '' } },

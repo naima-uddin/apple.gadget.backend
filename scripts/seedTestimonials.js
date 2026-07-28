@@ -30,30 +30,35 @@ if (existing > 0) {
 const SAMPLE = [
   {
     name: "Rafiul Islam",
+    address: "Dhaka, Bangladesh",
     rating: 5,
     message:
       "Ordered an iPhone charger and case — genuine product, well packed, and delivered within a day. Exactly what I expected.",
   },
   {
     name: "Nusrat Jahan",
+    address: "Chattogram, Bangladesh",
     rating: 5,
     message:
       "Great collection of Apple accessories at fair prices. Customer support replied quickly when I asked about warranty.",
   },
   {
     name: "Tanvir Ahmed",
+    address: "Sylhet, Bangladesh",
     rating: 4,
     message:
       "Smooth checkout and fast shipping. The AirPods case I bought looks and feels premium — will order again.",
   },
   {
     name: "Farhana Akter",
+    address: "Khulna, Bangladesh",
     rating: 5,
     message:
       "This is my second order from here. Products are always authentic and delivery is reliable every time.",
   },
   {
     name: "Shakil Hasan",
+    address: "Rajshahi, Bangladesh",
     rating: 5,
     message:
       "Best place to buy Apple gadgets online in Bangladesh. Easy returns policy gave me confidence to buy without hesitation.",

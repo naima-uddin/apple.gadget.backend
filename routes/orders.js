@@ -53,15 +53,43 @@ const DHAKA_NAMES = ["dhaka", "ঢাকা"];
 const isDhaka = (city) =>
   !!city && DHAKA_NAMES.some((d) => city.trim().toLowerCase() === d);
 
+// Case-insensitive/trim match helper for zone & area names.
+const sameName = (a, b) =>
+  !!a && !!b && a.trim().toLowerCase() === b.trim().toLowerCase();
+
 /**
- * Location-aware base shipping:
- *   - 70 TK inside Dhaka city
- *   - 130 TK for Savar and outside Dhaka
+ * Location-aware base shipping, driven by the admin-configured
+ * Setting.deliveryCharge (falls back to the ৳70 / ৳130 defaults if no
+ * config exists yet):
+ *   - outsideDhaka charge when city isn't Dhaka
+ *   - insideDhaka charge by default when city is Dhaka
+ *   - a per-zone override, or a more specific per-area override within that
+ *     zone, when configured for the matching Dhaka zone/area
  *   - 0 when city is unknown (not yet selected)
  */
-const calcBaseShipping = (sub, city) => {
+const calcBaseShipping = async (city, zone, area) => {
   if (!city) return 0;
-  return isDhaka(city) ? 70 : 130;
+
+  const Setting = (await import("../models/Setting.js")).default;
+  const settings = await Setting.findOne().select("deliveryCharge").lean();
+  const config = settings?.deliveryCharge || {};
+  const insideDhaka = config.insideDhaka ?? 70;
+  const outsideDhaka = config.outsideDhaka ?? 130;
+
+  if (!isDhaka(city)) return outsideDhaka;
+
+  const zoneEntry = zone
+    ? (config.zones || []).find((z) => sameName(z.zone, zone))
+    : null;
+  if (zoneEntry) {
+    const areaEntry = area
+      ? (zoneEntry.areas || []).find((a) => sameName(a.area, area))
+      : null;
+    if (areaEntry?.charge != null) return areaEntry.charge;
+    if (zoneEntry.charge != null) return zoneEntry.charge;
+  }
+
+  return insideDhaka;
 };
 
 /**
@@ -180,6 +208,8 @@ const resolveAndQuote = async (
   resolvedUserId,
   city,
   pointsToRedeem = 0,
+  zone = null,
+  area = null,
 ) => {
   const productIds = clientItems.map((i) => i.productId).filter(Boolean);
   const dbProducts = await Product.find({ _id: { $in: productIds } }).lean();
@@ -263,7 +293,9 @@ const resolveAndQuote = async (
   const hasFreeShipping = items.some(
     (i) => productMap[i.productId.toString()]?.freeShipping === true,
   );
-  const baseShipping = hasFreeShipping ? 0 : calcBaseShipping(subtotal, city);
+  const baseShipping = hasFreeShipping
+    ? 0
+    : await calcBaseShipping(city, zone, area);
 
   let totalCouponDiscount = 0;
   let couponGivesFreeShip = false;
@@ -520,6 +552,8 @@ router.post("/quote", async (req, res) => {
       couponCode,
       couponCodes,
       city,
+      zone,
+      area,
       pointsToRedeem,
     } = req.body;
     if (!Array.isArray(clientItems) || !clientItems.length) {
@@ -534,6 +568,8 @@ router.post("/quote", async (req, res) => {
       resolvedUserId,
       city || null,
       pointsToRedeem || 0,
+      zone || null,
+      area || null,
     );
     res.json(quote);
   } catch (err) {
@@ -686,6 +722,8 @@ router.post("/", orderLimiter, async (req, res) => {
         resolvedUserId,
         orderCity,
         pointsToRedeem || 0,
+        billingDetails?.zone || null,
+        billingDetails?.area || null,
       );
     } catch (err) {
       return res.status(err.status || 400).json({ error: err.message });

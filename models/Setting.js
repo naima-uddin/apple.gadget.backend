@@ -73,6 +73,30 @@ const SettingsSchema = new mongoose.Schema({
   taxPercent: { type: Number, default: 0 },
   lowStockThreshold: { type: Number, default: 5 },
   defaultShipping: { type: Number, default: 0 },
+  deliveryCharge: {
+    insideDhaka: { type: Number, default: 70 },
+    outsideDhaka: { type: Number, default: 130 },
+    zones: {
+      type: [
+        {
+          zone: { type: String, trim: true },
+          charge: { type: Number, default: null },
+          areas: {
+            type: [
+              {
+                area: { type: String, trim: true },
+                charge: { type: Number, default: null },
+                _id: false,
+              },
+            ],
+            default: [],
+          },
+          _id: false,
+        },
+      ],
+      default: [],
+    },
+  },
   paymentProviders: { type: PaymentProvidersSchema, default: () => ({}) },
   cloudinaryFolder: { type: String, default: "appleProduct/products" },
   topBannerEnabled: { type: Boolean, default: false },

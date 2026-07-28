@@ -11,6 +11,7 @@ import Admin from "../models/Admin.js";
 import User from "../models/User.js";
 import CheckoutSession from "../models/CheckoutSession.js";
 import CustomerTag from "../models/CustomerTag.js";
+import PackagingCost from "../models/PackagingCost.js";
 import Barcode from "../models/Barcode.js";
 import Product from "../models/Product.js";
 import FAQ from "../models/FAQ.js";
@@ -506,6 +507,26 @@ router.put("/settings", requireAdmin, async (req, res) => {
     const settings = await Setting.findOneAndUpdate(
       {},
       { $set: payload },
+      { upsert: true, new: true },
+    );
+    res.json({ ok: true, settings });
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Delivery charge config (inside/outside Dhaka defaults + per-zone/area
+// overrides) — any authenticated moderator/admin with catalog access can
+// manage, same access model as the policy content route below.
+router.put("/settings/delivery-charge", requireAdmin, async (req, res) => {
+  try {
+    const { deliveryCharge } = req.body || {};
+    if (!deliveryCharge || typeof deliveryCharge !== "object")
+      return res.status(400).json({ error: "deliveryCharge is required" });
+    const Setting = (await import("../models/Setting.js")).default;
+    const settings = await Setting.findOneAndUpdate(
+      {},
+      { $set: { deliveryCharge } },
       { upsert: true, new: true },
     );
     res.json({ ok: true, settings });
@@ -2305,6 +2326,94 @@ router.delete(
       if (!tag) return res.status(404).json({ error: "Not found" });
       await CustomerTag.deleteOne({ _id: tag._id });
       await User.updateMany({ tags: tag._id }, { $pull: { tags: tag._id } });
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(500).json({ error: "Server error" });
+    }
+  },
+);
+
+// --- Packaging cost management -----------------------------------------
+router.get(
+  "/packaging-costs",
+  requireAdmin,
+  requirePermission("products.packaging"),
+  async (req, res) => {
+    try {
+      const items = await PackagingCost.find({}).sort({ name: 1 });
+      res.json({ items });
+    } catch (err) {
+      res.status(500).json({ error: "Server error" });
+    }
+  },
+);
+
+router.post(
+  "/packaging-costs",
+  requireAdmin,
+  requirePermission("products.packaging"),
+  async (req, res) => {
+    try {
+      const { name, cost, description } = req.body || {};
+      if (!name || !String(name).trim()) {
+        return res.status(400).json({ error: "Name is required" });
+      }
+      const costNum = Number(cost);
+      if (!Number.isFinite(costNum) || costNum < 0) {
+        return res.status(400).json({ error: "Cost must be a valid number" });
+      }
+      const item = await PackagingCost.create({
+        name: String(name).trim(),
+        cost: costNum,
+        description: description || "",
+      });
+      res.status(201).json({ item });
+    } catch (err) {
+      res.status(500).json({ error: "Server error" });
+    }
+  },
+);
+
+router.put(
+  "/packaging-costs/:id",
+  requireAdmin,
+  requirePermission("products.packaging"),
+  async (req, res) => {
+    try {
+      const { name, cost, description } = req.body || {};
+      const item = await PackagingCost.findById(req.params.id);
+      if (!item) return res.status(404).json({ error: "Not found" });
+      if (typeof name !== "undefined") {
+        if (!String(name).trim()) {
+          return res.status(400).json({ error: "Name is required" });
+        }
+        item.name = String(name).trim();
+      }
+      if (typeof cost !== "undefined") {
+        const costNum = Number(cost);
+        if (!Number.isFinite(costNum) || costNum < 0) {
+          return res.status(400).json({ error: "Cost must be a valid number" });
+        }
+        item.cost = costNum;
+      }
+      if (typeof description !== "undefined") item.description = description || "";
+      await item.save();
+      res.json({ ok: true, item });
+    } catch (err) {
+      res.status(500).json({ error: "Server error" });
+    }
+  },
+);
+
+router.delete(
+  "/packaging-costs/:id",
+  requireAdmin,
+  requirePermission("products.packaging"),
+  async (req, res) => {
+    try {
+      const item = await PackagingCost.findById(req.params.id);
+      if (!item) return res.status(404).json({ error: "Not found" });
+      await PackagingCost.deleteOne({ _id: item._id });
       res.json({ ok: true });
     } catch (err) {
       res.status(500).json({ error: "Server error" });

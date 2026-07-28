@@ -408,6 +408,20 @@ app.get("/api/promo-panels", async (req, res) => {
   }
 });
 
+// Public: list active testimonials (homepage "What Our Customers Say")
+app.get("/api/testimonials", async (req, res) => {
+  try {
+    const { default: Testimonial } = await import("./models/Testimonial.js");
+    const items = await Testimonial.find({ isActive: true }).sort({
+      order: 1,
+      createdAt: 1,
+    });
+    res.json({ items });
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 // Public: which mobile-banking methods are enabled (checkout page needs this without auth)
 app.get("/api/payment-methods", async (req, res) => {
   try {

@@ -3556,6 +3556,123 @@ router.put(
   },
 );
 
+// ─── Testimonials (admin CRUD – homepage "What Our Customers Say") ──────────
+
+router.get(
+  "/testimonials",
+  requireAdmin,
+  requirePermission("content.promo"),
+  async (req, res) => {
+    try {
+      const Testimonial = (await import("../models/Testimonial.js")).default;
+      const items = await Testimonial.find().sort({ order: 1, createdAt: 1 });
+      res.json({ items });
+    } catch (err) {
+      res.status(500).json({ error: "Server error" });
+    }
+  },
+);
+
+router.post(
+  "/testimonials",
+  requireAdmin,
+  requirePermission("content.promo"),
+  async (req, res) => {
+    try {
+      const Testimonial = (await import("../models/Testimonial.js")).default;
+      const payload = req.body || {};
+      const last = await Testimonial.findOne().sort({ order: -1 });
+      payload.order = last ? last.order + 1 : 0;
+      const item = new Testimonial(payload);
+      await item.save();
+      res.json({ ok: true, item });
+    } catch (err) {
+      res.status(500).json({ error: "Server error" });
+    }
+  },
+);
+
+router.get(
+  "/testimonials/:id",
+  requireAdmin,
+  requirePermission("content.promo"),
+  async (req, res) => {
+    try {
+      const Testimonial = (await import("../models/Testimonial.js")).default;
+      const item = await Testimonial.findById(req.params.id);
+      if (!item) return res.status(404).json({ error: "Not found" });
+      res.json({ item });
+    } catch (err) {
+      res.status(500).json({ error: "Server error" });
+    }
+  },
+);
+
+router.put(
+  "/testimonials/:id",
+  requireAdmin,
+  requirePermission("content.promo"),
+  async (req, res) => {
+    try {
+      const Testimonial = (await import("../models/Testimonial.js")).default;
+      const updates = { ...req.body, updatedAt: Date.now() };
+      const item = await Testimonial.findByIdAndUpdate(req.params.id, updates, {
+        new: true,
+      });
+      if (!item) return res.status(404).json({ error: "Not found" });
+      res.json({ ok: true, item });
+    } catch (err) {
+      res.status(500).json({ error: "Server error" });
+    }
+  },
+);
+
+router.delete(
+  "/testimonials/:id",
+  requireAdmin,
+  requirePermission("content.promo"),
+  async (req, res) => {
+    try {
+      const Testimonial = (await import("../models/Testimonial.js")).default;
+      const item = await Testimonial.findByIdAndDelete(req.params.id);
+      if (!item) return res.status(404).json({ error: "Not found" });
+      if (item.avatar?.public_id) {
+        try {
+          ensureCloudinaryConfigured();
+          await cloudinary.uploader.destroy(item.avatar.public_id, {
+            resource_type: "image",
+          });
+        } catch {
+          /* ignore Cloudinary errors */
+        }
+      }
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(500).json({ error: "Server error" });
+    }
+  },
+);
+
+router.put(
+  "/testimonials-reorder",
+  requireAdmin,
+  requirePermission("content.promo"),
+  async (req, res) => {
+    try {
+      const Testimonial = (await import("../models/Testimonial.js")).default;
+      const items = req.body || [];
+      await Promise.all(
+        items.map(({ _id, order }) =>
+          Testimonial.findByIdAndUpdate(_id, { order }),
+        ),
+      );
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(500).json({ error: "Server error" });
+    }
+  },
+);
+
 // ─── Popup (admin CRUD – singleton) ──────────────────────────────────────────
 
 // GET current popup settings

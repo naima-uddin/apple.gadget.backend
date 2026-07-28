@@ -7,7 +7,7 @@ const router = express.Router();
 // Public: list published posts
 router.get('/', async (req, res) => {
   try {
-    const { page = 1, limit = 10, q, tag, featured } = req.query;
+    const { page = 1, limit = 10, q, tag, featured, sort } = req.query;
     const skip = (Math.max(1, page) - 1) * limit;
     const filter = { status: 'published' };
     if (q) filter.$or = [ { title: new RegExp(q, 'i') }, { excerpt: new RegExp(q, 'i') }, { content: new RegExp(q, 'i') } ];
@@ -15,11 +15,33 @@ router.get('/', async (req, res) => {
     if (featured === 'true') filter.isFeatured = true;
     if (featured === 'false') filter.isFeatured = { $ne: true }; // Not featured or undefined
 
+    const sortObj = sort === 'title' ? { title: 1 } : { publishedAt: -1 };
+
     const [items, total] = await Promise.all([
-      BlogPost.find(filter).sort({ publishedAt: -1 }).skip(Number(skip)).limit(Number(limit)).lean(),
+      BlogPost.find(filter).sort(sortObj).skip(Number(skip)).limit(Number(limit)).lean(),
       BlogPost.countDocuments(filter)
     ]);
     res.json({ items, total, page: Number(page), limit: Number(limit) });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Public: distinct tags actually used across published posts (drives the category sidebar)
+router.get('/tags', async (req, res) => {
+  try {
+    const tags = await BlogPost.distinct('tags', { status: 'published' });
+    res.json({ tags: tags.filter((t) => t).sort() });
+  } catch (err) {
+    res.status(500).json({ error: 'Server error' });
+  }
+});
+
+// Public: list all blog categories
+router.get('/categories', async (req, res) => {
+  try {
+    const categories = await BlogCategory.find().sort({ name: 1 });
+    res.json({ categories });
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
   }
@@ -90,16 +112,6 @@ router.get('/:slug/related', async (req, res) => {
     }
     
     res.json({ relatedPosts });
-  } catch (err) {
-    res.status(500).json({ error: 'Server error' });
-  }
-});
-
-// Public: list all blog categories
-router.get('/categories', async (req, res) => {
-  try {
-    const categories = await BlogCategory.find().sort({ name: 1 });
-    res.json({ categories });
   } catch (err) {
     res.status(500).json({ error: 'Server error' });
   }

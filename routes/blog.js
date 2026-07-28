@@ -7,11 +7,15 @@ const router = express.Router();
 // Public: list published posts
 router.get('/', async (req, res) => {
   try {
-    const { page = 1, limit = 10, q, tag, featured, sort } = req.query;
+    const { page = 1, limit = 10, q, tag, category, featured, sort } = req.query;
     const skip = (Math.max(1, page) - 1) * limit;
     const filter = { status: 'published' };
     if (q) filter.$or = [ { title: new RegExp(q, 'i') }, { excerpt: new RegExp(q, 'i') }, { content: new RegExp(q, 'i') } ];
     if (tag) filter.tags = tag;
+    if (category) {
+      const cat = await BlogCategory.findOne({ slug: category });
+      filter.categories = cat ? cat._id : null;
+    }
     if (featured === 'true') filter.isFeatured = true;
     if (featured === 'false') filter.isFeatured = { $ne: true }; // Not featured or undefined
 

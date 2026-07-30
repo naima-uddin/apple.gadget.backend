@@ -109,6 +109,8 @@ const ProductSchema = new mongoose.Schema(
 
     // pricing & inventory
     buyingPrice: { type: Number },
+    deliveryCharge: { type: Number },
+    packagingCost: { type: Number },
     price: { type: Number },
     compareAtPrice: { type: Number },
     inventory: { type: Number, default: 0 },

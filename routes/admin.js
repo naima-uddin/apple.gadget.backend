@@ -613,7 +613,9 @@ router.get(
     }
 
     const products = await Product.find(dbFilter)
-      .select("title sku images variants price buyingPrice category status")
+      .select(
+        "title sku images variants price buyingPrice deliveryCharge packagingCost category status",
+      )
       .lean();
 
     // Aggregate sold units + revenue per product from delivered orders only
@@ -654,6 +656,13 @@ router.get(
       return { sp, bp, profit, marginPct, markupPct, hasData: true };
     };
 
+    // Delivery charge + packaging cost are per-product (shared across
+    // variants), so "cost per item" = buying price + delivery + packaging.
+    const extraCost = (p) =>
+      Number(p.deliveryCharge || 0) + Number(p.packagingCost || 0);
+    const costPerItem = (bp, p) =>
+      bp == null ? bp : Number(bp) + extraCost(p);
+
     const rows = products.map((p) => {
       const hasVariants = p.variants && p.variants.length > 0;
       let variantMargins = [];
@@ -666,7 +675,10 @@ router.get(
             [v.color?.name, v.size].filter(Boolean).join(" / ") ||
             v.name ||
             `Variant ${i + 1}`,
-          ...calcMargin(v.price || p.price, v.buyingPrice ?? p.buyingPrice),
+          ...calcMargin(
+            v.price || p.price,
+            costPerItem(v.buyingPrice ?? p.buyingPrice, p),
+          ),
         }));
         const validVariants = variantMargins.filter((v) => v.hasData);
         if (validVariants.length) {
@@ -687,7 +699,7 @@ router.get(
           aggregateMargin = { hasData: false, noBuyingPrice: anyHasSp };
         }
       } else {
-        aggregateMargin = calcMargin(p.price, p.buyingPrice);
+        aggregateMargin = calcMargin(p.price, costPerItem(p.buyingPrice, p));
       }
 
       const marginPct = aggregateMargin?.marginPct ?? null;
@@ -703,15 +715,15 @@ router.get(
                 ? "medium"
                 : "high";
 
-      // Per-product sold financials (COGS estimated from current buying price)
+      // Per-product sold financials (COGS estimated from current cost per item)
       const sold = soldMap[p._id.toString()] || {};
       const effBP =
-        hasVariants && p.variants?.length
+        (hasVariants && p.variants?.length
           ? p.variants.reduce(
               (s, v) => s + Number(v.buyingPrice ?? p.buyingPrice ?? 0),
               0,
             ) / p.variants.length
-          : Number(p.buyingPrice ?? 0);
+          : Number(p.buyingPrice ?? 0)) + extraCost(p);
       const unitsSold = sold.unitsSold || 0;
       const soldRevenue = Math.round(sold.soldRevenue || 0);
       const soldCOGS = Math.round(effBP * unitsSold);
@@ -846,19 +858,21 @@ router.get(
       ...new Set(itemAgg.map((r) => r._id.productId).filter(Boolean)),
     ];
     const bpProducts = await Product.find({ _id: { $in: productIds } })
-      .select("_id buyingPrice variants")
+      .select("_id buyingPrice deliveryCharge packagingCost variants")
       .lean();
 
     const bpMap = {};
     bpProducts.forEach((p) => {
       const pid = p._id.toString();
+      const extra = Number(p.deliveryCharge || 0) + Number(p.packagingCost || 0);
       if (p.buyingPrice) {
-        bpMap[pid] = Number(p.buyingPrice);
+        bpMap[pid] = Number(p.buyingPrice) + extra;
       } else if (p.variants?.length) {
         const valid = p.variants.filter((v) => v.buyingPrice);
         if (valid.length)
           bpMap[pid] =
-            valid.reduce((s, v) => s + Number(v.buyingPrice), 0) / valid.length;
+            valid.reduce((s, v) => s + Number(v.buyingPrice), 0) / valid.length +
+            extra;
       }
     });
 
@@ -1106,7 +1120,8 @@ router.patch("/inventory/:id", requireAdmin, async (req, res) => {
 });
 
 // Buying price is its own granular permission — moderators without
-// products.buying_price must never receive it in any product payload.
+// products.buying_price must never receive it (or the other cost-per-item
+// inputs: delivery charge, packaging cost) in any product payload.
 const canSeeBuyingPrice = (admin) =>
   hasPermission(admin, "products.buying_price");
 
@@ -1115,6 +1130,8 @@ const stripBuyingPrice = (product) => {
   const p =
     typeof product.toObject === "function" ? product.toObject() : { ...product };
   delete p.buyingPrice;
+  delete p.deliveryCharge;
+  delete p.packagingCost;
   if (Array.isArray(p.variants)) {
     p.variants = p.variants.map((v) => {
       const variant =
@@ -1373,9 +1390,11 @@ router.post(
       if (payload.faqs) payload.faqs = normalizeFaqs(payload.faqs);
       const nextBarcode = normalizeBarcodeCode(payload.barcode);
 
-      // Moderators without the buying-price permission cannot set it
+      // Moderators without the buying-price permission cannot set cost data
       if (!canSeeBuyingPrice(req.admin)) {
         delete payload.buyingPrice;
+        delete payload.deliveryCharge;
+        delete payload.packagingCost;
         if (Array.isArray(payload.variants)) {
           payload.variants = payload.variants.map(
             ({ buyingPrice, ...rest }) => rest,
@@ -1518,9 +1537,12 @@ router.put(
       if (!existing) return res.status(404).json({ error: "Not found" });
 
       // Moderators without the buying-price permission can neither change nor
-      // wipe buying prices — restore the stored values before applying updates.
+      // wipe buying prices or the other cost-per-item inputs — restore the
+      // stored values before applying updates.
       if (!canSeeBuyingPrice(req.admin)) {
         delete updates.buyingPrice;
+        delete updates.deliveryCharge;
+        delete updates.packagingCost;
         if (Array.isArray(updates.variants)) {
           const existingVariants = existing.variants || [];
           updates.variants = updates.variants.map((v, i) => {

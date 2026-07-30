@@ -31,12 +31,15 @@ const normalizeBarcodeCode = (value) =>
 
 const router = express.Router();
 
-// buyingPrice is internal cost data — never expose it on public endpoints.
-// Variants are embedded documents, so the field must be removed per-variant too.
+// buyingPrice/deliveryCharge/packagingCost are internal cost data — never
+// expose them on public endpoints. Variants are embedded documents, so the
+// buyingPrice field must be removed per-variant too.
 const stripBuyingPrice = (product) => {
   if (!product) return product;
   const p = { ...product };
   delete p.buyingPrice;
+  delete p.deliveryCharge;
+  delete p.packagingCost;
   if (Array.isArray(p.variants)) {
     p.variants = p.variants.map(({ buyingPrice, ...rest }) => rest);
   }

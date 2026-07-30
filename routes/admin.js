@@ -12,6 +12,7 @@ import User from "../models/User.js";
 import CheckoutSession from "../models/CheckoutSession.js";
 import CustomerTag from "../models/CustomerTag.js";
 import PackagingCost from "../models/PackagingCost.js";
+import DropshippingCost from "../models/DropshippingCost.js";
 import Barcode from "../models/Barcode.js";
 import Product from "../models/Product.js";
 import FAQ from "../models/FAQ.js";
@@ -2436,6 +2437,96 @@ router.delete(
       const item = await PackagingCost.findById(req.params.id);
       if (!item) return res.status(404).json({ error: "Not found" });
       await PackagingCost.deleteOne({ _id: item._id });
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(500).json({ error: "Server error" });
+    }
+  },
+);
+
+// --- Dropshipping cost management (cost to bring a product from the
+// dropshipping supplier to the store — feeds "cost per item" alongside
+// buying price and packaging cost) --------------------------------------
+router.get(
+  "/dropshipping-costs",
+  requireAdmin,
+  requirePermission("products.dropshipping"),
+  async (req, res) => {
+    try {
+      const items = await DropshippingCost.find({}).sort({ name: 1 });
+      res.json({ items });
+    } catch (err) {
+      res.status(500).json({ error: "Server error" });
+    }
+  },
+);
+
+router.post(
+  "/dropshipping-costs",
+  requireAdmin,
+  requirePermission("products.dropshipping"),
+  async (req, res) => {
+    try {
+      const { name, cost, description } = req.body || {};
+      if (!name || !String(name).trim()) {
+        return res.status(400).json({ error: "Name is required" });
+      }
+      const costNum = Number(cost);
+      if (!Number.isFinite(costNum) || costNum < 0) {
+        return res.status(400).json({ error: "Cost must be a valid number" });
+      }
+      const item = await DropshippingCost.create({
+        name: String(name).trim(),
+        cost: costNum,
+        description: description || "",
+      });
+      res.status(201).json({ item });
+    } catch (err) {
+      res.status(500).json({ error: "Server error" });
+    }
+  },
+);
+
+router.put(
+  "/dropshipping-costs/:id",
+  requireAdmin,
+  requirePermission("products.dropshipping"),
+  async (req, res) => {
+    try {
+      const { name, cost, description } = req.body || {};
+      const item = await DropshippingCost.findById(req.params.id);
+      if (!item) return res.status(404).json({ error: "Not found" });
+      if (typeof name !== "undefined") {
+        if (!String(name).trim()) {
+          return res.status(400).json({ error: "Name is required" });
+        }
+        item.name = String(name).trim();
+      }
+      if (typeof cost !== "undefined") {
+        const costNum = Number(cost);
+        if (!Number.isFinite(costNum) || costNum < 0) {
+          return res.status(400).json({ error: "Cost must be a valid number" });
+        }
+        item.cost = costNum;
+      }
+      if (typeof description !== "undefined") item.description = description || "";
+      await item.save();
+      res.json({ ok: true, item });
+    } catch (err) {
+      res.status(500).json({ error: "Server error" });
+    }
+  },
+);
+
+router.delete(
+  "/dropshipping-costs/:id",
+  requireAdmin,
+  requirePermission("products.dropshipping"),
+  async (req, res) => {
+    try {
+      const item = await DropshippingCost.findById(req.params.id);
+      if (!item) return res.status(404).json({ error: "Not found" });
+      await DropshippingCost.deleteOne({ _id: item._id });
       res.json({ ok: true });
     } catch (err) {
       res.status(500).json({ error: "Server error" });

@@ -1,7 +1,7 @@
 # Pickob E-Commerce Platform - API Documentation
 
 **Version:** 1.0.0
-**Base URL:** `https://your-backend-domain.com` or `https://api.pickob.com`
+**Base URL:** `https://your-backend-domain.com` or `https://api.applebd.com`
 **Last Updated:** March 28, 2026
 
 ---
@@ -561,7 +561,7 @@ POST /api/products/upload
 ```json
 {
   "url": "https://res.cloudinary.com/.../optimized.webp",
-  "public_id": "Pickob/products/abc123"
+  "public_id": "applebd/products/abc123"
 }
 ```
 
@@ -1667,7 +1667,7 @@ GET /api/admin/settings
 {
   "settings": {
     "storeName": "Pickob",
-    "storeEmail": "support@Pickob.com",
+    "storeEmail": "support@applebd.com",
     "storePhone": "+8801712345678",
     "topBannerText": "...",
     "topBannerEnabled": true,
@@ -1676,7 +1676,7 @@ GET /api/admin/settings
     "adsenseSlot": "987654",
     "stockThreshold": 10,
     "lowStockAlert": true,
-    "orderNotificationEmail": "orders@Pickob.com",
+    "orderNotificationEmail": "orders@applebd.com",
     ...
   }
 }
@@ -2524,7 +2524,7 @@ GET /api/admin/media
 
 **Query Parameters:**
 
-- `folder`: Filter by folder (e.g., "Pickob/products")
+- `folder`: Filter by folder (e.g., "applebd/products")
 - `next_cursor`: Pagination cursor from previous response
 - `q`: Search by public_id
 
@@ -2534,7 +2534,7 @@ GET /api/admin/media
 {
   "resources": [
     {
-      "public_id": "Pickob/products/prod123",
+      "public_id": "applebd/products/prod123",
       "secure_url": "https://res.cloudinary.com/.../image.webp",
       "format": "webp",
       "width": 1600,
@@ -2561,7 +2561,7 @@ GET /api/admin/media/folders
 ```json
 {
   "folders": [
-    { "name": "Pickob/products", "path": "Pickob/products" },
+    { "name": "applebd/products", "path": "applebd/products" },
     { "name": "Pickob/banners", "path": "Pickob/banners" }
   ]
 }
@@ -2579,7 +2579,7 @@ DELETE /api/admin/media
 
 ```json
 {
-  "public_ids": ["Pickob/products/prod123", "Pickob/banners/banner456"]
+  "public_ids": ["applebd/products/prod123", "Pickob/banners/banner456"]
 }
 ```
 
@@ -2588,7 +2588,7 @@ DELETE /api/admin/media
 ```json
 {
   "deleted": {
-    "Pickob/products/prod123": "deleted",
+    "applebd/products/prod123": "deleted",
     "Pickob/banners/banner456": "deleted"
   }
 }
@@ -3128,7 +3128,7 @@ JWT_SECRET=your_super_secret_key_here
 CLOUDINARY_CLOUD_NAME=your_cloud_name
 CLOUDINARY_API_KEY=your_api_key
 CLOUDINARY_API_SECRET=your_api_secret
-CLOUDINARY_FOLDER=Pickob/products
+CLOUDINARY_FOLDER=applebd/products
 
 # Image Optimization
 IMG_MAX_WIDTH=1600
@@ -3210,7 +3210,7 @@ All dates use **ISO 8601** format:
 ### Test Admin Account
 
 ```
-Email: admin@Pickob.com
+Email: admin@applebd.com
 Password: admin123
 ```
 
@@ -3228,7 +3228,7 @@ CVV: 123
 
 For API issues or questions:
 
-- **Email:** support@Pickob.com
+- **Email:** support@applebd.com
 - **GitHub Issues:** [Project Repository]
 - **Documentation:** This file
 

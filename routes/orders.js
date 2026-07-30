@@ -40,8 +40,8 @@ import {
 
 const router = express.Router();
 
-const BACKEND_URL = process.env.BACKEND_URL || "https://api.pickob.com";
-const FRONTEND_URL = process.env.FRONTEND_ORIGIN || "https://pickob.com";
+const BACKEND_URL = process.env.BACKEND_URL || "https://api.applebd.com";
+const FRONTEND_URL = process.env.FRONTEND_ORIGIN || "https://applebd.com";
 // Credentials are read lazily (inside each handler) so they are always
 // resolved after dotenv has populated process.env, regardless of ESM
 // module evaluation order.
@@ -875,7 +875,7 @@ router.post("/", orderLimiter, async (req, res) => {
       product_profile: "general",
       num_of_item: items.reduce((s, i) => s + i.quantity, 0),
       cus_name: billingDetails.name,
-      cus_email: billingDetails.email || userEmail || "customer@Pickob.com",
+      cus_email: billingDetails.email || userEmail || "customer@applebd.com",
       cus_add1: billingDetails.address || "N/A",
       cus_city: billingDetails.city || "Dhaka",
       cus_postcode: "1000",
@@ -1127,7 +1127,7 @@ router.post("/:id/pay", async (req, res) => {
       product_profile: "general",
       num_of_item: (order.items || []).reduce((s, i) => s + i.quantity, 0),
       cus_name: billing.name || "Customer",
-      cus_email: billing.email || order.userEmail || "customer@Pickob.com",
+      cus_email: billing.email || order.userEmail || "customer@applebd.com",
       cus_add1: billing.address || "N/A",
       cus_city: billing.city || "Dhaka",
       cus_postcode: "1000",

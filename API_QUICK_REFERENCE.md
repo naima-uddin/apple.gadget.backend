@@ -510,7 +510,7 @@ Cookie: token=<jwt_token>
 - `SMTP_HOST`, `SMTP_USER`, `SMTP_PASS`
 - `IMG_MAX_WIDTH` (default: 1600)
 - `IMG_QUALITY` (default: 75)
-- `CLOUDINARY_FOLDER` (default: Pickob/products)
+- `CLOUDINARY_FOLDER` (default: applebd/products)
 
 ---
 
@@ -519,7 +519,7 @@ Cookie: token=<jwt_token>
 ### Admin Login
 
 ```
-Email: admin@Pickob.com
+Email: admin@applebd.com
 Password: admin123
 ```
 
@@ -540,13 +540,13 @@ CVV: 123
 **Get Products:**
 
 ```bash
-curl https://api.pickob.com/api/products?page=1&limit=20
+curl https://api.applebd.com/api/products?page=1&limit=20
 ```
 
 **Create Order:**
 
 ```bash
-curl -X POST https://api.pickob.com/api/orders \
+curl -X POST https://api.applebd.com/api/orders \
   -H "Content-Type: application/json" \
   -d '{
     "userEmail": "test@example.com",
@@ -559,10 +559,10 @@ curl -X POST https://api.pickob.com/api/orders \
 **Admin Login:**
 
 ```bash
-curl -X POST https://api.pickob.com/api/admin/login \
+curl -X POST https://api.applebd.com/api/admin/login \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "admin@Pickob.com",
+    "email": "admin@applebd.com",
     "password": "admin123",
     "secret": "your_secret"
   }' \
@@ -572,7 +572,7 @@ curl -X POST https://api.pickob.com/api/admin/login \
 **Get Dashboard (with cookie):**
 
 ```bash
-curl https://api.pickob.com/api/admin/dashboard-overview \
+curl https://api.applebd.com/api/admin/dashboard-overview \
   -b cookies.txt
 ```
 
@@ -622,6 +622,6 @@ curl https://api.pickob.com/api/admin/dashboard-overview \
 ## Support
 
 - **Full Documentation:** See `API_DOCUMENTATION.md`
-- **Email:** support@Pickob.com
+- **Email:** support@applebd.com
 - **Version:** 1.0.0
 - **Last Updated:** March 28, 2026

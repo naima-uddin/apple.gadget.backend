@@ -20,7 +20,7 @@ This guide provides ready-to-use examples for testing all API endpoints using **
 ### Base URL
 
 ```
-Development: https://api.pickob.com
+Development: https://api.applebd.com
 Production: https://api.yourdomain.com
 ```
 
@@ -68,7 +68,7 @@ Body (JSON):
 **cURL:**
 
 ```bash
-curl -X POST https://api.pickob.com/api/auth/firebase-login \
+curl -X POST https://api.applebd.com/api/auth/firebase-login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "user@example.com",
@@ -82,7 +82,7 @@ curl -X POST https://api.pickob.com/api/auth/firebase-login \
 **JavaScript (fetch):**
 
 ```javascript
-fetch("https://api.pickob.com/api/auth/firebase-login", {
+fetch("https://api.applebd.com/api/auth/firebase-login", {
   method: "POST",
   headers: {
     "Content-Type": "application/json",
@@ -127,7 +127,7 @@ GET {{baseUrl}}/api/auth/me
 **cURL:**
 
 ```bash
-curl https://api.pickob.com/api/auth/me \
+curl https://api.applebd.com/api/auth/me \
   -b cookies.txt
 ```
 
@@ -156,7 +156,7 @@ Content-Type: application/json
 
 Body:
 {
-  "email": "admin@Pickob.com",
+  "email": "admin@applebd.com",
   "password": "admin123"
 }
 ```
@@ -164,10 +164,10 @@ Body:
 **cURL:**
 
 ```bash
-curl -X POST https://api.pickob.com/api/admin/login \
+curl -X POST https://api.applebd.com/api/admin/login \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "admin@Pickob.com",
+    "email": "admin@applebd.com",
     "password": "admin123"
   }' \
   -c admin_cookies.txt
@@ -180,7 +180,7 @@ curl -X POST https://api.pickob.com/api/admin/login \
   "ok": true,
   "admin": {
     "_id": "admin123",
-    "email": "admin@Pickob.com",
+    "email": "admin@applebd.com",
     "name": "Admin Name",
     "role": "admin"
   }
@@ -200,7 +200,7 @@ POST {{baseUrl}}/api/auth/logout
 **cURL:**
 
 ```bash
-curl -X POST https://api.pickob.com/api/auth/logout \
+curl -X POST https://api.applebd.com/api/auth/logout \
   -b cookies.txt \
   -c cookies.txt
 ```
@@ -220,7 +220,7 @@ GET {{baseUrl}}/api/products?page=1&limit=20&sort=priceLow&minPrice=500&maxPrice
 **cURL:**
 
 ```bash
-curl "https://api.pickob.com/api/products?page=1&limit=20&sort=priceLow&minPrice=500&maxPrice=2000"
+curl "https://api.applebd.com/api/products?page=1&limit=20&sort=priceLow&minPrice=500&maxPrice=2000"
 ```
 
 **JavaScript:**
@@ -235,7 +235,7 @@ const params = new URLSearchParams({
   categoryId: "cat123",
 });
 
-fetch(`https://api.pickob.com/api/products?${params}`)
+fetch(`https://api.applebd.com/api/products?${params}`)
   .then((res) => res.json())
   .then((data) => console.log(data));
 ```
@@ -274,7 +274,7 @@ GET {{baseUrl}}/api/products?q=phone&page=1&limit=20
 **cURL:**
 
 ```bash
-curl "https://api.pickob.com/api/products?q=phone&page=1&limit=20"
+curl "https://api.applebd.com/api/products?q=phone&page=1&limit=20"
 ```
 
 ---
@@ -290,7 +290,7 @@ GET {{baseUrl}}/api/products/prod123
 **cURL:**
 
 ```bash
-curl https://api.pickob.com/api/products/prod123
+curl https://api.applebd.com/api/products/prod123
 ```
 
 ---
@@ -306,7 +306,7 @@ GET {{baseUrl}}/api/products/categories
 **cURL:**
 
 ```bash
-curl https://api.pickob.com/api/products/categories
+curl https://api.applebd.com/api/products/categories
 ```
 
 ---
@@ -331,7 +331,7 @@ Body:
 **cURL:**
 
 ```bash
-curl -X POST https://api.pickob.com/api/products/prod123/reviews \
+curl -X POST https://api.applebd.com/api/products/prod123/reviews \
   -H "Content-Type: application/json" \
   -b cookies.txt \
   -d '{
@@ -345,7 +345,7 @@ curl -X POST https://api.pickob.com/api/products/prod123/reviews \
 **JavaScript:**
 
 ```javascript
-fetch("https://api.pickob.com/api/products/prod123/reviews", {
+fetch("https://api.applebd.com/api/products/prod123/reviews", {
   method: "POST",
   headers: { "Content-Type": "application/json" },
   credentials: "include",
@@ -380,7 +380,7 @@ Body:
 **cURL:**
 
 ```bash
-curl -X POST https://api.pickob.com/api/products/prod123/questions \
+curl -X POST https://api.applebd.com/api/products/prod123/questions \
   -H "Content-Type: application/json" \
   -b cookies.txt \
   -d '{
@@ -408,7 +408,7 @@ Body (form-data):
 **cURL:**
 
 ```bash
-curl -X POST https://api.pickob.com/api/products/upload \
+curl -X POST https://api.applebd.com/api/products/upload \
   -F "image=@/path/to/image.jpg"
 ```
 
@@ -418,7 +418,7 @@ curl -X POST https://api.pickob.com/api/products/upload \
 const formData = new FormData();
 formData.append("image", fileInput.files[0]);
 
-fetch("https://api.pickob.com/api/products/upload", {
+fetch("https://api.applebd.com/api/products/upload", {
   method: "POST",
   body: formData,
 })
@@ -431,7 +431,7 @@ fetch("https://api.pickob.com/api/products/upload", {
 ```json
 {
   "url": "https://res.cloudinary.com/.../optimized.webp",
-  "public_id": "Pickob/products/abc123"
+  "public_id": "applebd/products/abc123"
 }
 ```
 
@@ -465,7 +465,7 @@ Body:
 **cURL:**
 
 ```bash
-curl -X POST https://api.pickob.com/api/orders/quote \
+curl -X POST https://api.applebd.com/api/orders/quote \
   -H "Content-Type: application/json" \
   -d '{
     "items": [
@@ -543,7 +543,7 @@ Body:
 **cURL:**
 
 ```bash
-curl -X POST https://api.pickob.com/api/orders \
+curl -X POST https://api.applebd.com/api/orders \
   -H "Content-Type: application/json" \
   -d '{
     "userEmail": "customer@example.com",
@@ -625,7 +625,7 @@ GET {{baseUrl}}/api/orders/my?page=1&limit=10
 **cURL:**
 
 ```bash
-curl https://api.pickob.com/api/orders/my?page=1&limit=10 \
+curl https://api.applebd.com/api/orders/my?page=1&limit=10 \
   -b cookies.txt
 ```
 
@@ -642,7 +642,7 @@ GET {{baseUrl}}/api/orders/order123
 **cURL:**
 
 ```bash
-curl https://api.pickob.com/api/orders/order123
+curl https://api.applebd.com/api/orders/order123
 ```
 
 ---
@@ -658,7 +658,7 @@ PATCH {{baseUrl}}/api/orders/order123/cancel
 **cURL:**
 
 ```bash
-curl -X PATCH https://api.pickob.com/api/orders/order123/cancel \
+curl -X PATCH https://api.applebd.com/api/orders/order123/cancel \
   -b cookies.txt
 ```
 
@@ -677,7 +677,7 @@ GET {{baseUrl}}/api/admin/dashboard-overview
 **cURL:**
 
 ```bash
-curl https://api.pickob.com/api/admin/dashboard-overview \
+curl https://api.applebd.com/api/admin/dashboard-overview \
   -b admin_cookies.txt
 ```
 
@@ -735,7 +735,7 @@ Body:
 **cURL:**
 
 ```bash
-curl -X POST https://api.pickob.com/api/admin/categories \
+curl -X POST https://api.applebd.com/api/admin/categories \
   -H "Content-Type: application/json" \
   -b admin_cookies.txt \
   -d '{
@@ -804,7 +804,7 @@ Body:
 **cURL:**
 
 ```bash
-curl -X POST https://api.pickob.com/api/admin/products \
+curl -X POST https://api.applebd.com/api/admin/products \
   -H "Content-Type: application/json" \
   -b admin_cookies.txt \
   -d @product.json
@@ -841,7 +841,7 @@ DELETE {{baseUrl}}/api/admin/products/prod123
 **cURL:**
 
 ```bash
-curl -X DELETE https://api.pickob.com/api/admin/products/prod123 \
+curl -X DELETE https://api.applebd.com/api/admin/products/prod123 \
   -b admin_cookies.txt
 ```
 
@@ -858,7 +858,7 @@ DELETE {{baseUrl}}/api/admin/products/prod123?force=true
 **cURL:**
 
 ```bash
-curl -X DELETE "https://api.pickob.com/api/admin/products/prod123?force=true" \
+curl -X DELETE "https://api.applebd.com/api/admin/products/prod123?force=true" \
   -b admin_cookies.txt
 ```
 
@@ -875,7 +875,7 @@ GET {{baseUrl}}/api/admin/orders?page=1&limit=50&status=pending&paymentStatus=pa
 **cURL:**
 
 ```bash
-curl "https://api.pickob.com/api/admin/orders?page=1&limit=50&status=pending" \
+curl "https://api.applebd.com/api/admin/orders?page=1&limit=50&status=pending" \
   -b admin_cookies.txt
 ```
 
@@ -909,7 +909,7 @@ Body:
 **cURL:**
 
 ```bash
-curl -X PUT https://api.pickob.com/api/admin/orders/order123/status \
+curl -X PUT https://api.applebd.com/api/admin/orders/order123/status \
   -H "Content-Type: application/json" \
   -b admin_cookies.txt \
   -d '{"status": "confirmed"}'
@@ -988,7 +988,7 @@ Body (form-data):
 **cURL:**
 
 ```bash
-curl -X POST https://api.pickob.com/api/admin/upload \
+curl -X POST https://api.applebd.com/api/admin/upload \
   -b admin_cookies.txt \
   -F "image=@/path/to/banner.jpg" \
   -F "folder=banners"
@@ -1001,13 +1001,13 @@ curl -X POST https://api.pickob.com/api/admin/upload \
 **Postman:**
 
 ```
-GET {{baseUrl}}/api/admin/media?folder=Pickob/products&next_cursor=abc123
+GET {{baseUrl}}/api/admin/media?folder=applebd/products&next_cursor=abc123
 ```
 
 **cURL:**
 
 ```bash
-curl "https://api.pickob.com/api/admin/media?folder=Pickob/products" \
+curl "https://api.applebd.com/api/admin/media?folder=applebd/products" \
   -b admin_cookies.txt
 ```
 
@@ -1024,7 +1024,7 @@ Content-Type: application/json
 Body:
 {
   "public_ids": [
-    "Pickob/products/old_image1",
+    "applebd/products/old_image1",
     "Pickob/banners/old_banner"
   ]
 }
@@ -1033,12 +1033,12 @@ Body:
 **cURL:**
 
 ```bash
-curl -X DELETE https://api.pickob.com/api/admin/media \
+curl -X DELETE https://api.applebd.com/api/admin/media \
   -H "Content-Type: application/json" \
   -b admin_cookies.txt \
   -d '{
     "public_ids": [
-      "Pickob/products/old_image1",
+      "applebd/products/old_image1",
       "Pickob/banners/old_banner"
     ]
   }'
@@ -1056,7 +1056,7 @@ Content-Type: application/json
 
 Body:
 {
-  "email": "moderator@Pickob.com",
+  "email": "moderator@applebd.com",
   "name": "Moderator Name",
   "password": "securePassword123",
   "role": "moderator"
@@ -1242,8 +1242,8 @@ Body:
 Create environment in Postman with these variables:
 
 ```
-baseUrl: https://api.pickob.com
-adminEmail: admin@Pickob.com
+baseUrl: https://api.applebd.com
+adminEmail: admin@applebd.com
 adminPassword: admin123
 testUserId: user123
 testProductId: prod123
@@ -1258,12 +1258,12 @@ Open browser console and test APIs directly:
 
 ```javascript
 // Test product listing
-fetch("https://api.pickob.com/api/products?page=1&limit=10")
+fetch("https://api.applebd.com/api/products?page=1&limit=10")
   .then((r) => r.json())
   .then((data) => console.log(data));
 
 // Test user login
-fetch("https://api.pickob.com/api/auth/firebase-login", {
+fetch("https://api.applebd.com/api/auth/firebase-login", {
   method: "POST",
   headers: { "Content-Type": "application/json" },
   credentials: "include",
@@ -1277,7 +1277,7 @@ fetch("https://api.pickob.com/api/auth/firebase-login", {
   .then((data) => console.log(data));
 
 // Test getting current user
-fetch("https://api.pickob.com/api/auth/me", {
+fetch("https://api.applebd.com/api/auth/me", {
   credentials: "include",
 })
   .then((r) => r.json())
@@ -1293,7 +1293,7 @@ Create a test file `test-api.js`:
 ```javascript
 const axios = require("axios");
 
-const baseURL = "https://api.pickob.com";
+const baseURL = "https://api.applebd.com";
 const api = axios.create({
   baseURL,
   withCredentials: true,

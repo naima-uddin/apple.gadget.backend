@@ -106,7 +106,7 @@ npm start
 6. **Verify installation**
 
 ```bash
-curl https://api.pickob.com/api/auth/ping
+curl https://api.applebd.com/api/auth/ping
 ```
 
 Expected response:
@@ -139,7 +139,7 @@ JWT_SECRET=your_super_secret_jwt_key_here_min_32_chars
 CLOUDINARY_CLOUD_NAME=your_cloud_name
 CLOUDINARY_API_KEY=your_api_key
 CLOUDINARY_API_SECRET=your_api_secret
-CLOUDINARY_FOLDER=Pickob/products
+CLOUDINARY_FOLDER=applebd/products
 
 # Image Optimization
 IMG_MAX_WIDTH=1600
@@ -147,7 +147,7 @@ IMG_QUALITY=75
 
 # CORS Configuration
 FRONTEND_ORIGIN=http://localhost:3000
-BACKEND_URL=https://api.pickob.com
+BACKEND_URL=https://api.applebd.com
 
 # SSLCommerz Payment Gateway
 STORE_ID=your_store_id
@@ -238,7 +238,7 @@ Pickobbackend/
 ### Base URL
 
 ```
-Development: https://api.pickob.com
+Development: https://api.applebd.com
 Production: https://api.yourdomain.com
 ```
 
@@ -259,13 +259,13 @@ Production: https://api.yourdomain.com
 **List Products:**
 
 ```bash
-curl https://api.pickob.com/api/products?page=1&limit=20
+curl https://api.applebd.com/api/products?page=1&limit=20
 ```
 
 **Create Order:**
 
 ```bash
-curl -X POST https://api.pickob.com/api/orders \
+curl -X POST https://api.applebd.com/api/orders \
   -H "Content-Type: application/json" \
   -d '{
     "userEmail": "customer@example.com",
@@ -278,10 +278,10 @@ curl -X POST https://api.pickob.com/api/orders \
 **Admin Login:**
 
 ```bash
-curl -X POST https://api.pickob.com/api/admin/login \
+curl -X POST https://api.applebd.com/api/admin/login \
   -H "Content-Type: application/json" \
   -d '{
-    "email": "admin@Pickob.com",
+    "email": "admin@applebd.com",
     "password": "admin123"
   }'
 ```
@@ -366,7 +366,7 @@ All uploaded images are automatically optimized:
 ### Upload Endpoint
 
 ```bash
-curl -X POST https://api.pickob.com/api/products/upload \
+curl -X POST https://api.applebd.com/api/products/upload \
   -F "image=@/path/to/image.jpg"
 ```
 
@@ -375,7 +375,7 @@ curl -X POST https://api.pickob.com/api/products/upload \
 ```json
 {
   "url": "https://res.cloudinary.com/.../optimized.webp",
-  "public_id": "Pickob/products/abc123"
+  "public_id": "applebd/products/abc123"
 }
 ```
 
@@ -462,13 +462,13 @@ See [API_TESTING_GUIDE.md](./API_TESTING_GUIDE.md) for detailed testing instruct
 
 ```bash
 # Test server health
-curl https://api.pickob.com/api/auth/ping
+curl https://api.applebd.com/api/auth/ping
 
 # Test product listing
-curl https://api.pickob.com/api/products?limit=5
+curl https://api.applebd.com/api/products?limit=5
 
 # Test with authentication
-curl https://api.pickob.com/api/auth/me \
+curl https://api.applebd.com/api/auth/me \
   -H "Cookie: token=<your_jwt_token>"
 ```
 
@@ -550,7 +550,7 @@ server {
     server_name api.yourdomain.com;
 
     location / {
-        proxy_pass https://api.pickob.com;
+        proxy_pass https://api.applebd.com;
         proxy_http_version 1.1;
         proxy_set_header Upgrade $http_upgrade;
         proxy_set_header Connection 'upgrade';
@@ -654,7 +654,7 @@ This project is proprietary and confidential.
 
 ## 📞 Support
 
-- **Email:** support@Pickob.com
+- **Email:** support@applebd.com
 - **Documentation:** See `/docs` folder
 - **Issues:** Create GitHub issue
 

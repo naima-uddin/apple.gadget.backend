@@ -13,7 +13,7 @@ const CategorySchema = new mongoose.Schema({
   name: { type: String, required: true },
   slug: { type: String, index: true },
   description: { type: String, default: '' },
-  parent: { type: mongoose.Schema.Types.ObjectId, ref: 'Category' },
+  parent: { type: mongoose.Schema.Types.ObjectId, ref: 'Category', index: true },
   level: { type: Number, default: 0 },
   order: { type: Number, default: 0 },
   images: [ImageSchema],

@@ -148,47 +148,26 @@ router.put("/:id", requireAdmin, async (req, res) => {
       cat.level = newParent.level + 1;
     }
 
-    // Delete removed images from Cloudinary
-    if (Array.isArray(removedImages) && removedImages.length > 0) {
-      try {
-        ensureCloudinaryConfigured();
-        for (const publicId of removedImages) {
-          if (publicId) {
-            try {
-              await cloudinary.uploader.destroy(publicId, {
-                resource_type: "image",
-              });
-            } catch {
-              // ignore Cloudinary errors
-            }
-          }
-        }
-      } catch {
-        // ignore Cloudinary errors
-      }
-    }
-
-    // process image removals (delete from Cloudinary if public_id removed)
+    // Collect Cloudinary public_ids to remove (explicit removedImages + any
+    // images dropped from the new images array), then destroy them all
+    // concurrently in the background so the save isn't blocked on Cloudinary.
+    const idsToRemove = new Set(
+      (Array.isArray(removedImages) ? removedImages : []).filter(Boolean),
+    );
     if (Array.isArray(cat.images) && Array.isArray(images)) {
       const oldIds = cat.images.map((i) => i && i.public_id).filter(Boolean);
       const newIds = images.map((i) => i && i.public_id).filter(Boolean);
-      const removed = oldIds.filter((id) => !newIds.includes(id));
-      if (removed.length > 0) {
-        try {
-          ensureCloudinaryConfigured();
-          for (const publicId of removed) {
-            try {
-              await cloudinary.uploader.destroy(publicId, {
-                resource_type: "image",
-              });
-            } catch {
-              // ignore Cloudinary errors
-            }
-          }
-        } catch {
-          // ignore Cloudinary errors
-        }
-      }
+      oldIds.filter((id) => !newIds.includes(id)).forEach((id) => idsToRemove.add(id));
+    }
+    if (idsToRemove.size > 0) {
+      ensureCloudinaryConfigured();
+      Promise.all(
+        [...idsToRemove].map((publicId) =>
+          cloudinary.uploader
+            .destroy(publicId, { resource_type: "image" })
+            .catch(() => {}),
+        ),
+      ).catch(() => {});
     }
 
     if (name) cat.name = name;
@@ -222,36 +201,34 @@ router.delete("/:id", requireAdmin, async (req, res) => {
           error:
             "Category has subcategories; remove them first or deactivate instead",
         });
-    const product = await Product.findOne({ categoryId: cat._id });
+    const product = await Product.findOne({
+      categoryId: cat._id,
+      deletedAt: null,
+    });
     if (product)
       return res
         .status(400)
         .json({ error: "Category is used by products; cannot delete" });
 
-    // remove any images from Cloudinary before deleting the category
-    try {
-      if (Array.isArray(cat.images) && cat.images.length > 0) {
-        const ids = cat.images.map((i) => i && i.public_id).filter(Boolean);
-        if (ids.length > 0) {
-          ensureCloudinaryConfigured();
-          for (const publicId of ids) {
-            try {
-              await cloudinary.uploader.destroy(publicId, {
-                resource_type: "image",
-              });
-            } catch {
-              // ignore Cloudinary errors
-            }
-          }
-        }
-      }
-    } catch {
-      // proceed with deletion of DB record even if Cloudinary cleanup fails
-    }
-
     await cat.deleteOne();
     bustCatCache();
     res.json({ ok: true });
+
+    // clean up Cloudinary images in the background — no need to make the
+    // admin wait on external API round-trips for a category that's already gone
+    if (Array.isArray(cat.images) && cat.images.length > 0) {
+      const ids = cat.images.map((i) => i && i.public_id).filter(Boolean);
+      if (ids.length > 0) {
+        ensureCloudinaryConfigured();
+        Promise.all(
+          ids.map((publicId) =>
+            cloudinary.uploader
+              .destroy(publicId, { resource_type: "image" })
+              .catch(() => {}),
+          ),
+        ).catch(() => {});
+      }
+    }
   } catch (err) {
     res.status(500).json({ error: "Server error" });
   }

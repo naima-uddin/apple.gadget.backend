@@ -25,8 +25,8 @@ async function main() {
     console.log("Usage: node seedAdmin.js <email> <password> [name]");
     process.exit(1);
   }
-  if (password.length < 8) {
-    console.log("Password must be at least 8 characters.");
+  if (password.length < 6) {
+    console.log("Password must be at least 6 characters.");
     process.exit(1);
   }
 

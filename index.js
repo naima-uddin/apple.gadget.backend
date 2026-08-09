@@ -377,6 +377,114 @@ app.get("/api/featured", async (req, res) => {
   }
 });
 
+// Public: single featured section by id, populated with its products —
+// used to render one individually-placed Featured Row on the homepage.
+app.get("/api/featured/:id", async (req, res) => {
+  try {
+    const { default: FeaturedSection } =
+      await import("./models/FeaturedSection.js");
+    const { default: Product } = await import("./models/Product.js");
+    const sec = await FeaturedSection.findOne({
+      _id: req.params.id,
+      isActive: true,
+      type: { $ne: "video" },
+    }).lean();
+    if (!sec) return res.status(404).json({ error: "Not found" });
+
+    let products = [];
+    if (sec.productIds?.length > 0) {
+      const idOrder = sec.productIds.map((id) => id.toString());
+      const found = await Product.find({
+        _id: { $in: idOrder },
+        status: { $ne: "archived" },
+      })
+        .select(HOMEPAGE_PRODUCT_SELECT)
+        .lean();
+      const map = Object.fromEntries(found.map((p) => [p._id.toString(), p]));
+      products = idOrder.map((id) => map[id]).filter(Boolean);
+    } else if (sec.categoryId) {
+      products = await Product.find({
+        categoryId: sec.categoryId,
+        status: { $ne: "archived" },
+      })
+        .select(HOMEPAGE_PRODUCT_SELECT)
+        .sort({ updatedAt: -1 })
+        .limit(sec.limit || 10)
+        .lean();
+    }
+
+    res.json({ section: { ...sec, products } });
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Public: ordered list of active homepage blocks (used by Home.jsx to decide
+// which sections to render and in what order) — a mix of fixed blocks and
+// individually-placed Featured Rows.
+app.get("/api/homepage-layout", async (req, res) => {
+  try {
+    const { default: HomepageLayout, FIXED_REGISTRY } = await import(
+      "./models/HomepageLayout.js"
+    );
+    const { default: FeaturedSection } =
+      await import("./models/FeaturedSection.js");
+
+    const layoutItems = await HomepageLayout.find({ isActive: true })
+      .sort({ order: 1 })
+      .lean();
+
+    if (!layoutItems.length) {
+      // Not seeded yet (no admin has opened the dashboard tab) — fall back
+      // to the code-defined default fixed order so the homepage never
+      // renders blank. Individual Featured Rows aren't known until seeded.
+      return res.json({
+        items: FIXED_REGISTRY.map((r, i) => ({
+          type: "fixed",
+          key: r.key,
+          order: i,
+        })),
+      });
+    }
+
+    const rowIds = layoutItems
+      .filter((i) => i.type === "featuredRow")
+      .map((i) => i.featuredSectionId);
+    const activeRowIds = rowIds.length
+      ? new Set(
+          (
+            await FeaturedSection.find({
+              _id: { $in: rowIds },
+              isActive: true,
+              type: { $ne: "video" },
+            })
+              .select("_id")
+              .lean()
+          ).map((s) => String(s._id)),
+        )
+      : new Set();
+
+    const items = layoutItems
+      .filter(
+        (i) =>
+          i.type === "fixed" || activeRowIds.has(String(i.featuredSectionId)),
+      )
+      .map((i) =>
+        i.type === "fixed"
+          ? { type: "fixed", key: i.key, order: i.order }
+          : {
+              type: "featuredRow",
+              featuredSectionId: i.featuredSectionId,
+              order: i.order,
+            },
+      );
+
+    res.json({ items });
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 // Public: list active promo strip items (used below homepage banner)
 app.get("/api/promo-strip", async (req, res) => {
   try {
@@ -445,6 +553,27 @@ app.get("/api/deal-of-day", async (req, res) => {
     const { default: Product } = await import("./models/Product.js");
     const p = await Product.findById(productId).lean();
     res.json({ product: p || null });
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Public: category-page heading + icon row, shown below the breadcrumb —
+// each icon links wherever the admin points it (usually /category/{slug}/).
+app.get("/api/store-hero", async (req, res) => {
+  try {
+    const { default: Setting } = await import("./models/Setting.js");
+    const s = await Setting.findOne().lean();
+    const cfg = s?.storeHero || {};
+    const items = (cfg.items || []).filter(
+      (it) => it && it.isActive !== false && (it.image?.url || it.label),
+    );
+    res.json({
+      heading: cfg.heading || "Store.",
+      subheading:
+        cfg.subheading || "The best way to buy the products you love.",
+      items,
+    });
   } catch (err) {
     res.status(500).json({ error: "Server error" });
   }

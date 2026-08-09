@@ -306,6 +306,30 @@ const SettingsSchema = new mongoose.Schema({
     ref: "Product",
     default: null,
   },
+  // category-page heading + icon row, shown below the breadcrumb (Mac /
+  // iPhone / iPad / … style quick category switcher), each icon links
+  // wherever admin sets
+  storeHero: {
+    heading: { type: String, default: "Store." },
+    subheading: {
+      type: String,
+      default: "The best way to buy the products you love.",
+    },
+    items: [
+      new mongoose.Schema(
+        {
+          image: {
+            url: { type: String, default: "" },
+            public_id: { type: String, default: "" },
+          },
+          label: { type: String, default: "" },
+          link: { type: String, default: "/" },
+          isActive: { type: Boolean, default: true },
+        },
+        { _id: false },
+      ),
+    ],
+  },
   // homepage bento category showcase — each page has 6 slots:
   // [left big, 4 small in the middle, right big]; multiple pages = slider
   categoryShowcase: {

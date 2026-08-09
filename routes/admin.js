@@ -3306,6 +3306,180 @@ router.put(
   },
 );
 
+// ─── Homepage Layout (admin: reorder/toggle top-level homepage blocks) ──────
+
+// GET /api/admin/homepage-layout — list all homepage blocks (fixed + one row
+// per individual Featured Row) sorted by order. Self-seeds/self-heals so the
+// list always reflects FIXED_REGISTRY and the current FeaturedSection docs
+// without needing a manual migration step.
+router.get(
+  "/homepage-layout",
+  requireAdmin,
+  requirePermission("content"),
+  async (req, res) => {
+    try {
+      const { default: HomepageLayout, FIXED_REGISTRY } = await import(
+        "../models/HomepageLayout.js"
+      );
+      const { default: FeaturedSection } = await import(
+        "../models/FeaturedSection.js"
+      );
+
+      const [existingFixed, existingRows, productSections] = await Promise.all([
+        HomepageLayout.find({ type: "fixed" }).select("key"),
+        HomepageLayout.find({ type: "featuredRow" }),
+        FeaturedSection.find({ type: { $ne: "video" } }).select("_id title"),
+      ]);
+
+      const nextOrder = async () => {
+        const last = await HomepageLayout.findOne().sort({ order: -1 });
+        return (last?.order ?? -1) + 1;
+      };
+
+      // 1) Seed any FIXED_REGISTRY keys not yet in the DB.
+      const existingFixedKeys = new Set(existingFixed.map((e) => e.key));
+      const missingFixed = FIXED_REGISTRY.filter(
+        (r) => !existingFixedKeys.has(r.key),
+      );
+      if (missingFixed.length) {
+        let order = await nextOrder();
+        await Promise.all(
+          missingFixed.map((r) =>
+            HomepageLayout.findOneAndUpdate(
+              { type: "fixed", key: r.key },
+              { $setOnInsert: { type: "fixed", key: r.key, label: r.label, order: order++ } },
+              { upsert: true },
+            ),
+          ),
+        );
+      }
+
+      // 2) Remove fixed rows whose key was retired from FIXED_REGISTRY
+      // (e.g. the old single "featuredSections" block).
+      const registryKeys = new Set(FIXED_REGISTRY.map((r) => r.key));
+      const staleFixedKeys = existingFixed
+        .map((e) => e.key)
+        .filter((k) => !registryKeys.has(k));
+      if (staleFixedKeys.length) {
+        await HomepageLayout.deleteMany({
+          type: "fixed",
+          key: { $in: staleFixedKeys },
+        });
+      }
+
+      // 3) Seed a featuredRow entry for any product-type FeaturedSection that
+      // doesn't have one yet.
+      const rowSectionIds = new Set(
+        existingRows.map((r) => String(r.featuredSectionId)),
+      );
+      const missingRows = productSections.filter(
+        (s) => !rowSectionIds.has(String(s._id)),
+      );
+      if (missingRows.length) {
+        let order = await nextOrder();
+        await Promise.all(
+          missingRows.map((s) =>
+            HomepageLayout.findOneAndUpdate(
+              { type: "featuredRow", featuredSectionId: s._id },
+              {
+                $setOnInsert: {
+                  type: "featuredRow",
+                  featuredSectionId: s._id,
+                  label: s.title,
+                  order: order++,
+                },
+              },
+              { upsert: true },
+            ),
+          ),
+        );
+      }
+
+      // 4) Drop featuredRow entries whose section was deleted or switched to
+      // type 'video' (video carousels stay grouped, not individually placed).
+      const productSectionIds = new Set(
+        productSections.map((s) => String(s._id)),
+      );
+      const orphanRowIds = existingRows
+        .filter((r) => !productSectionIds.has(String(r.featuredSectionId)))
+        .map((r) => r._id);
+      if (orphanRowIds.length) {
+        await HomepageLayout.deleteMany({ _id: { $in: orphanRowIds } });
+      }
+
+      // 5) Refresh labels that drifted from the section's current title.
+      const titleBySectionId = Object.fromEntries(
+        productSections.map((s) => [String(s._id), s.title]),
+      );
+      const staleLabelRows = existingRows.filter((r) => {
+        const currentTitle = titleBySectionId[String(r.featuredSectionId)];
+        return currentTitle && currentTitle !== r.label;
+      });
+      if (staleLabelRows.length) {
+        await Promise.all(
+          staleLabelRows.map((r) =>
+            HomepageLayout.findByIdAndUpdate(r._id, {
+              label: titleBySectionId[String(r.featuredSectionId)],
+            }),
+          ),
+        );
+      }
+
+      const items = await HomepageLayout.find().sort({ order: 1 });
+      res.json({ items });
+    } catch (err) {
+      res.status(500).json({ error: "Server error" });
+    }
+  },
+);
+
+// PUT /api/admin/homepage-layout-reorder — update order for multiple blocks at once
+// body: [ { _id, order }, … ]
+router.put(
+  "/homepage-layout-reorder",
+  requireAdmin,
+  requirePermission("content"),
+  async (req, res) => {
+    try {
+      const { default: HomepageLayout } = await import(
+        "../models/HomepageLayout.js"
+      );
+      const items = req.body || [];
+      await Promise.all(
+        items.map(({ _id, order }) =>
+          HomepageLayout.findByIdAndUpdate(_id, { order }),
+        ),
+      );
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(500).json({ error: "Server error" });
+    }
+  },
+);
+
+// PUT /api/admin/homepage-layout/:id — toggle a block's visibility
+router.put(
+  "/homepage-layout/:id",
+  requireAdmin,
+  requirePermission("content"),
+  async (req, res) => {
+    try {
+      const { default: HomepageLayout } = await import(
+        "../models/HomepageLayout.js"
+      );
+      const updated = await HomepageLayout.findByIdAndUpdate(
+        req.params.id,
+        { isActive: !!req.body.isActive, updatedAt: Date.now() },
+        { new: true },
+      );
+      if (!updated) return res.status(404).json({ error: "Not found" });
+      res.json({ item: updated });
+    } catch (err) {
+      res.status(500).json({ error: "Server error" });
+    }
+  },
+);
+
 // ─── Promo Strip Items (admin CRUD) ─────────────────────────────────────────
 
 // GET /api/admin/promo-strip — list all promo strip items sorted by order

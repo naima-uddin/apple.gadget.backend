@@ -375,6 +375,7 @@ router.get("/top-banner", async (req, res) => {
       adsensePublisherId: s?.adsensePublisherId || "",
       adsenseSlot: s?.adsenseSlot || "",
       websiteLogo: s?.websiteLogo || {},
+      footerLogo: s?.footerLogo || {},
       websiteFavicon: s?.websiteFavicon || {},
       storeName: s?.storeName || "",
       footerInfo: s?.footerInfo || { phone: "", email: "", address: "" },
@@ -402,6 +403,7 @@ router.get("/top-banner", async (req, res) => {
       adsenseEnabled: false,
       adsensePublisherId: "",
       websiteLogo: {},
+      footerLogo: {},
       websiteFavicon: {},
       storeName: "",
       footerInfo: { phone: "", email: "", address: "" },
@@ -541,7 +543,7 @@ router.put("/settings/delivery-charge", requireAdmin, async (req, res) => {
 // editor can save footer/contact/about tabs through the same route.
 router.put("/settings/policy", requireAdmin, async (req, res) => {
   try {
-    const { policyContent, footerInfo, contactInfo, socialLinks, footerLinks, aboutContent } =
+    const { policyContent, footerInfo, contactInfo, socialLinks, footerLinks, footerLogo, aboutContent } =
       req.body || {};
     const $set = {};
     if (policyContent && typeof policyContent === "object")
@@ -550,6 +552,7 @@ router.put("/settings/policy", requireAdmin, async (req, res) => {
     if (contactInfo && typeof contactInfo === "object") $set.contactInfo = contactInfo;
     if (socialLinks && typeof socialLinks === "object") $set.socialLinks = socialLinks;
     if (footerLinks && typeof footerLinks === "object") $set.footerLinks = footerLinks;
+    if (footerLogo && typeof footerLogo === "object") $set.footerLogo = footerLogo;
     if (aboutContent && typeof aboutContent === "object") $set.aboutContent = aboutContent;
     if (Object.keys($set).length === 0)
       return res.status(400).json({ error: "No valid fields provided" });
@@ -6533,6 +6536,7 @@ router.post("/migrate-cloudinary-folder", requireAdmin, async (req, res) => {
     const settingDocs = await SettingModel.find({
       $or: [
         { "websiteLogo.url": { $regex: from } },
+        { "footerLogo.url": { $regex: from } },
         { cloudinaryFolder: { $regex: from } },
       ],
     }).lean();
@@ -6541,6 +6545,8 @@ router.post("/migrate-cloudinary-folder", requireAdmin, async (req, res) => {
       const upd = {};
       if (d.websiteLogo?.url?.includes(from))
         upd.websiteLogo = rep(d.websiteLogo);
+      if (d.footerLogo?.url?.includes(from))
+        upd.footerLogo = rep(d.footerLogo);
       if (d.cloudinaryFolder?.includes(from))
         upd.cloudinaryFolder = d.cloudinaryFolder.replaceAll(from, to);
       if (Object.keys(upd).length) {

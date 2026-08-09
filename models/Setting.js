@@ -118,6 +118,13 @@ const SettingsSchema = new mongoose.Schema({
     height: { type: Number },
     format: { type: String, default: "" },
   },
+  footerLogo: {
+    public_id: { type: String, default: "" },
+    url: { type: String, default: "" },
+    width: { type: Number },
+    height: { type: Number },
+    format: { type: String, default: "" },
+  },
   websiteFavicon: {
     public_id: { type: String, default: "" },
     url: { type: String, default: "" },

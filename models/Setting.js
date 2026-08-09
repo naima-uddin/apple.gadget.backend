@@ -98,7 +98,7 @@ const SettingsSchema = new mongoose.Schema({
     },
   },
   paymentProviders: { type: PaymentProvidersSchema, default: () => ({}) },
-  cloudinaryFolder: { type: String, default: "appleProduct/products" },
+  cloudinaryFolder: { type: String, default: "applebd/products" },
   topBannerEnabled: { type: Boolean, default: false },
   topBannerHtml: { type: String, default: "" },
   topBannerConfig: {

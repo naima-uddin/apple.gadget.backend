@@ -3336,22 +3336,44 @@ router.get(
         return (last?.order ?? -1) + 1;
       };
 
-      // 1) Seed any FIXED_REGISTRY keys not yet in the DB.
+      // 1) Seed any FIXED_REGISTRY keys not yet in the DB. New keys are
+      // inserted right after their nearest already-seeded predecessor in
+      // FIXED_REGISTRY (falling back to the very end if none precede it),
+      // so e.g. adding a block between "banner" and "shopByCategory" in the
+      // registry places it there for existing sites too — not at the bottom.
       const existingFixedKeys = new Set(existingFixed.map((e) => e.key));
       const missingFixed = FIXED_REGISTRY.filter(
         (r) => !existingFixedKeys.has(r.key),
       );
       if (missingFixed.length) {
-        let order = await nextOrder();
-        await Promise.all(
-          missingFixed.map((r) =>
-            HomepageLayout.findOneAndUpdate(
-              { type: "fixed", key: r.key },
-              { $setOnInsert: { type: "fixed", key: r.key, label: r.label, order: order++ } },
-              { upsert: true },
-            ),
-          ),
-        );
+        const allSorted = await HomepageLayout.find().sort({ order: 1 });
+        for (const r of missingFixed) {
+          const idx = FIXED_REGISTRY.findIndex((x) => x.key === r.key);
+          let afterOrder = null;
+          for (let i = idx - 1; i >= 0; i--) {
+            const found = allSorted.find(
+              (c) => c.type === "fixed" && c.key === FIXED_REGISTRY[i].key,
+            );
+            if (found) {
+              afterOrder = found.order;
+              break;
+            }
+          }
+          let newOrder;
+          if (afterOrder === null) {
+            newOrder = allSorted.length ? allSorted[0].order - 1 : 0;
+          } else {
+            const next = allSorted.find((c) => c.order > afterOrder);
+            newOrder = next ? (afterOrder + next.order) / 2 : afterOrder + 1;
+          }
+          const doc = await HomepageLayout.findOneAndUpdate(
+            { type: "fixed", key: r.key },
+            { $setOnInsert: { type: "fixed", key: r.key, label: r.label, order: newOrder } },
+            { upsert: true, new: true },
+          );
+          allSorted.push(doc);
+          allSorted.sort((a, b) => a.order - b.order);
+        }
       }
 
       // 2) Remove fixed rows whose key was retired from FIXED_REGISTRY

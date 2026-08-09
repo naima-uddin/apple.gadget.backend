@@ -7,6 +7,7 @@ import mongoose from 'mongoose';
 // positioned independently among these fixed blocks.
 export const FIXED_REGISTRY = [
   { key: 'banner', label: 'Hero Banner (Slider)' },
+  { key: 'storeHero', label: 'Store Hero (Category Quick-Switcher)' },
   { key: 'shopByCategory', label: 'Shop by Category' },
   { key: 'adSlot', label: 'Ad Slot' },
   { key: 'categoryShowcase', label: 'Category Showcase' },
@@ -14,6 +15,8 @@ export const FIXED_REGISTRY = [
   { key: 'dealsOfDay', label: 'Deals of the Day' },
   { key: 'ctaSection', label: 'CTA Banner' },
   { key: 'offersToSayYes', label: 'Offers Banner' },
+  { key: 'allProducts', label: 'All Products (Carousel)' },
+  { key: 'categoryWiseProducts', label: 'Category Wise Products (Best-Selling First)' },
   { key: 'testimonials', label: 'Testimonials' },
   { key: 'shoppableVideo', label: 'Shoppable Video Carousel' },
 ];

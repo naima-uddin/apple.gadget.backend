@@ -15,8 +15,6 @@ export const FIXED_REGISTRY = [
   { key: 'dealsOfDay', label: 'Deals of the Day' },
   { key: 'ctaSection', label: 'CTA Banner' },
   { key: 'offersToSayYes', label: 'Offers Banner' },
-  { key: 'allProducts', label: 'All Products (Carousel)' },
-  { key: 'categoryWiseProducts', label: 'Category Wise Products (Best-Selling First)' },
   { key: 'testimonials', label: 'Testimonials' },
   { key: 'shoppableVideo', label: 'Shoppable Video Carousel' },
 ];

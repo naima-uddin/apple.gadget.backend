@@ -51,7 +51,7 @@ const ShowcaseTileSchema = new mongoose.Schema(
 );
 
 const SettingsSchema = new mongoose.Schema({
-  storeName: { type: String, default: "Pickob" },
+  storeName: { type: String, default: "AppleBD" },
   storeEmail: { type: String, default: "" },
   footerInfo: {
     phone: { type: String, default: "" },

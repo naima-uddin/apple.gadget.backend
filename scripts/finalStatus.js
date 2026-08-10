@@ -29,8 +29,8 @@ const fetchFolder = async (prefix) => {
     cursor = r.next_cursor;
   } while (cursor);
 };
-await fetchFolder("Pickob/media/");
-await fetchFolder("Pickob/products/");
+await fetchFolder("AppleBD/media/");
+await fetchFolder("AppleBD/products/");
 
 const checkUrl = (url) => new Promise((resolve) => {
   if (!url || !url.startsWith("http")) return resolve(0);

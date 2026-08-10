@@ -1,7 +1,7 @@
 /**
  * cloudinaryAudit.js
  * Lists ALL image assets in Cloudinary across every known folder so we can
- * see exactly what survived the SmartBuyBD → Pickob migration.
+ * see exactly what survived the SmartBuyBD → AppleBD migration.
  *
  * Run:  node scripts/cloudinaryAudit.js
  */
@@ -41,9 +41,9 @@ const FOLDERS = [
   "SmartBuyBD/",
   "SmartBuyBD/media/",
   "SmartBuyBD/products/",
-  "Pickob/",
-  "Pickob/media/",
-  "Pickob/products/",
+  "AppleBD/",
+  "AppleBD/media/",
+  "AppleBD/products/",
   "yourhaat/",
   "yourhaat/products/",
 ];

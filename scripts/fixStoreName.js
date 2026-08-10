@@ -1,5 +1,5 @@
 /**
- * One-time fix: update storeName from "YourHaat" (or any wrong value) to "Pickob"
+ * One-time fix: update storeName from "YourHaat" (or any wrong value) to "AppleBD"
  * in the Settings collection.
  *
  * Run: node scripts/fixStoreName.js
@@ -21,13 +21,13 @@ const Setting = (await import("../models/Setting.js")).default;
 
 const current = await Setting.findOne().lean();
 if (!current) {
-  console.log("No settings document found — creating with Pickob.");
-  await Setting.create({ storeName: "Pickob" });
+  console.log("No settings document found — creating with AppleBD.");
+  await Setting.create({ storeName: "AppleBD" });
 } else {
   console.log(`Current storeName: "${current.storeName}"`);
-  if (current.storeName !== "Pickob") {
-    await Setting.updateOne({}, { $set: { storeName: "Pickob" } });
-    console.log('Updated storeName to "Pickob".');
+  if (current.storeName !== "AppleBD") {
+    await Setting.updateOne({}, { $set: { storeName: "AppleBD" } });
+    console.log('Updated storeName to "AppleBD".');
   } else {
     console.log("storeName is already correct — no change needed.");
   }

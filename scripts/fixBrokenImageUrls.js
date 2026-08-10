@@ -3,14 +3,14 @@
  * ─────────────────────────────────────────────────────────────────────────────
  * Recovery script for products whose image URLs still point to the old
  * "SmartBuyBD" Cloudinary folder (and possibly "yourhaat") after the folder
- * was renamed to "Pickob".
+ * was renamed to "AppleBD".
  *
  * Strategy per broken image URL:
- *   1. Try the URL with "SmartBuyBD" → "Pickob" substitution
- *      (covers SmartBuyBD/media/ → Pickob/media/)
- *   2. Try the URL with "SmartBuyBD/media/" → "Pickob/products/" substitution
+ *   1. Try the URL with "SmartBuyBD" → "AppleBD" substitution
+ *      (covers SmartBuyBD/media/ → AppleBD/media/)
+ *   2. Try the URL with "SmartBuyBD/media/" → "AppleBD/products/" substitution
  *      (covers uploads that were moved to the products sub-folder)
- *   3. Try the URL with "yourhaat/" → "Pickob/products/" substitution
+ *   3. Try the URL with "yourhaat/" → "AppleBD/products/" substitution
  *   4. If none work, skip and report
  *
  * Run:
@@ -54,15 +54,15 @@ const checkUrl = (url) =>
 const candidates = (url) => {
   const alts = [];
   if (url.includes("SmartBuyBD")) {
-    // Try SmartBuyBD → Pickob (keeps sub-path)
-    alts.push(url.replaceAll("SmartBuyBD", "Pickob"));
-    // Try SmartBuyBD/media/ → Pickob/products/
+    // Try SmartBuyBD → AppleBD (keeps sub-path)
+    alts.push(url.replaceAll("SmartBuyBD", "AppleBD"));
+    // Try SmartBuyBD/media/ → AppleBD/products/
     if (url.includes("SmartBuyBD/media/")) {
-      alts.push(url.replace("SmartBuyBD/media/", "Pickob/products/"));
+      alts.push(url.replace("SmartBuyBD/media/", "AppleBD/products/"));
     }
   }
   if (url.includes("yourhaat/")) {
-    alts.push(url.replace(/yourhaat\/[^/]+\//, "Pickob/products/"));
+    alts.push(url.replace(/yourhaat\/[^/]+\//, "AppleBD/products/"));
   }
   return alts;
 };

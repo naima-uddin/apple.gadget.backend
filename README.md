@@ -1,6 +1,6 @@
-# Pickob E-Commerce Backend
+# AppleBD E-Commerce Backend
 
-A comprehensive Node.js/Express backend for the Pickob e-commerce platform with admin dashboard, payment integration, and full API support.
+A comprehensive Node.js/Express backend for the AppleBD e-commerce platform with admin dashboard, payment integration, and full API support.
 
 ---
 
@@ -76,7 +76,7 @@ A comprehensive Node.js/Express backend for the Pickob e-commerce platform with 
 
 ```bash
 git clone <your-repo-url>
-cd Pickobbackend
+cd AppleBD
 ```
 
 2. **Install dependencies**
@@ -130,7 +130,7 @@ PORT=5000
 NODE_ENV=development
 
 # Database
-MONGODB_URI=mongodb://localhost:27017/Pickob
+MONGODB_URI=mongodb://localhost:27017/AppleBD
 
 # JWT Secret
 JWT_SECRET=your_super_secret_jwt_key_here_min_32_chars
@@ -195,7 +195,7 @@ node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
 ## 🗂️ Project Structure
 
 ```
-Pickobbackend/
+AppleBD/
 ├── index.js                 # Main server file
 ├── routes/
 │   ├── auth.js             # Authentication routes
@@ -503,7 +503,7 @@ Import the API collection structure from [API_TESTING_GUIDE.md](./API_TESTING_GU
 heroku login
 
 # Create app
-heroku create Pickob-api
+heroku create AppleBD-api
 
 # Set environment variables
 heroku config:set NODE_ENV=production
@@ -530,11 +530,11 @@ sudo npm install -g pm2
 
 # Clone and setup
 git clone <your-repo>
-cd Pickobbackend
+cd AppleBD
 npm install
 
 # Start with PM2
-pm2 start index.js --name Pickob-api
+pm2 start index.js --name AppleBD-api
 pm2 startup
 pm2 save
 
@@ -688,7 +688,7 @@ This project is proprietary and confidential.
 
 ---
 
-**Built with ❤️ by the Pickob Team**
+**Built with ❤️ by the AppleBD Team**
 
 **Version:** 1.0.0
 **Last Updated:** March 28, 2026
@@ -704,7 +704,7 @@ This project is proprietary and confidential.
 - 📊 [Admin Dashboard](#)
 
 // Connect to MongoDB (with fallback if SRV DNS lookup fails)
-const MONGODB_URI = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/Pickob';
+const MONGODB_URI = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/AppleBD';
 const MONGODB_URI_DIRECT = process.env.MONGODB_URI_DIRECT;
 
 async function connectMongo() {
@@ -747,10 +747,10 @@ CLOUDINARY_API_KEY=446279722954425
 CLOUDINARY_API_SECRET=6f286BxKJk2FEgR1kHYKoqlyTyY
 CLOUDINARY_CLOUD_NAME=dqyaobg8j
 
-# FRONTEND_ORIGIN=https://Pickobfrontend-ei5y.vercel.app
+# FRONTEND_ORIGIN=https://AppleBDfrontend-ei5y.vercel.app
 
 FRONTEND_ORIGIN=http://localhost:3000
-MONGODB_URI="mongodb://Pickob:Pickob@ac-uarjbv7-shard-00-00.txpmesm.mongodb.net:27017,ac-uarjbv7-shard-00-01.txpmesm.mongodb.net:27017,ac-uarjbv7-shard-00-02.txpmesm.mongodb.net:27017/Pickob?ssl=true&replicaSet=atlas-ji89w4-shard-0&authSource=admin&retryWrites=true&w=majority"
+MONGODB_URI="mongodb://AppleBD:AppleBD@ac-uarjbv7-shard-00-00.txpmesm.mongodb.net:27017,ac-uarjbv7-shard-00-01.txpmesm.mongodb.net:27017,ac-uarjbv7-shard-00-02.txpmesm.mongodb.net:27017/AppleBD?ssl=true&replicaSet=atlas-ji89w4-shard-0&authSource=admin&retryWrites=true&w=majority"
 PORT=5000
 SMTP_HOST=smtp.gmail.com
 SMTP_PASS="obsi iufk hodz hses"
@@ -758,7 +758,7 @@ SMTP_PORT=465
 SMTP_USER=naimaa2it@gmail.com
 STORE_EMAIL=naimaa2it@gmail.com
 STORE_ID=a2it69acfd899c29d
-STORE_NAME=Pickob
+STORE_NAME=AppleBD
 STORE_PASSWORD=a2it69acfd899c29d@ssl
 STORE_PHONE=01884242851
 
@@ -830,7 +830,7 @@ next();
 const PORT = process.env.PORT || 5000;
 
 // Connect to MongoDB (with fallback if SRV DNS lookup fails)
-const MONGODB_URI = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/Pickob';
+const MONGODB_URI = process.env.MONGODB_URI || process.env.MONGO_URI || 'mongodb://localhost:27017/AppleBD';
 const MONGODB_URI_DIRECT = process.env.MONGODB_URI_DIRECT;
 
 async function connectMongo() {

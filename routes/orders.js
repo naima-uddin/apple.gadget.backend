@@ -870,7 +870,7 @@ router.post("/", orderLimiter, async (req, res) => {
         items
           .map((i) => i.title)
           .join(", ")
-          .slice(0, 255) || "Pickob Order",
+          .slice(0, 255) || "AppleBD Order",
       product_category: "Mixed",
       product_profile: "general",
       num_of_item: items.reduce((s, i) => s + i.quantity, 0),
@@ -1122,7 +1122,7 @@ router.post("/:id/pay", async (req, res) => {
         (order.items || [])
           .map((i) => i.title)
           .join(", ")
-          .slice(0, 255) || "Pickob Order",
+          .slice(0, 255) || "AppleBD Order",
       product_category: "Mixed",
       product_profile: "general",
       num_of_item: (order.items || []).reduce((s, i) => s + i.quantity, 0),

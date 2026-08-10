@@ -794,7 +794,7 @@ Body:
     "details": "Unused with original packaging"
   },
   "seo": {
-    "title": "Buy Wireless Headphones - Pickob",
+    "title": "Buy Wireless Headphones - AppleBD",
     "description": "Shop high-quality wireless headphones",
     "keywords": ["wireless", "headphones", "bluetooth"]
   }
@@ -930,8 +930,8 @@ Body:
   "title": "Summer Sale",
   "desktopImage": "https://res.cloudinary.com/.../desktop.webp",
   "mobileImage": "https://res.cloudinary.com/.../mobile.webp",
-  "desktopPublicId": "Pickob/banners/desktop123",
-  "mobilePublicId": "Pickob/banners/mobile123",
+  "desktopPublicId": "AppleBD/banners/desktop123",
+  "mobilePublicId": "AppleBD/banners/mobile123",
   "link": "/shop/summer-sale",
   "isActive": true
 }
@@ -963,7 +963,7 @@ Body:
   "status": "published",
   "publishedAt": "2026-03-28T10:00:00.000Z",
   "seo": {
-    "title": "Top 10 Fashion Trends in 2026 | Pickob Blog",
+    "title": "Top 10 Fashion Trends in 2026 | AppleBD Blog",
     "description": "Explore the hottest fashion trends of 2026",
     "keywords": ["fashion", "trends", "style"]
   }
@@ -1025,7 +1025,7 @@ Body:
 {
   "public_ids": [
     "applebd/products/old_image1",
-    "Pickob/banners/old_banner"
+    "AppleBD/banners/old_banner"
   ]
 }
 ```
@@ -1039,7 +1039,7 @@ curl -X DELETE https://api.applebd.com/api/admin/media \
   -d '{
     "public_ids": [
       "applebd/products/old_image1",
-      "Pickob/banners/old_banner"
+      "AppleBD/banners/old_banner"
     ]
   }'
 ```
@@ -1179,7 +1179,7 @@ Body:
 ## Postman Collection Structure
 
 ```
-📁 Pickob API
+📁 AppleBD API
 ├── 📁 Auth
 │   ├── User Login (Firebase)
 │   ├── Admin Login

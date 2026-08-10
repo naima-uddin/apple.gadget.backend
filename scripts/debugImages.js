@@ -27,8 +27,8 @@ const fetchFolder = async (prefix) => {
     cursor = r.next_cursor;
   } while (cursor);
 };
-await fetchFolder("Pickob/media/");
-await fetchFolder("Pickob/products/");
+await fetchFolder("AppleBD/media/");
+await fetchFolder("AppleBD/products/");
 console.log(`Cloudinary URL map: ${urlMap.size} assets\n`);
 
 // Check one specific Cloudinary URL live
@@ -39,9 +39,9 @@ const testUrl = async (url) => new Promise((resolve) => {
   req.end();
 });
 
-// Get first 3 products with broken Pickob/media images
+// Get first 3 products with broken AppleBD/media images
 const col = mongoose.connection.collection("products");
-const products = await col.find({ "images.url": { $regex: "Pickob/media" } }).limit(3).toArray();
+const products = await col.find({ "images.url": { $regex: "AppleBD/media" } }).limit(3).toArray();
 
 for (const p of products.slice(0, 2)) {
   console.log(`\nProduct: ${p.title?.slice(0, 60)}`);
@@ -72,10 +72,10 @@ for (const p of products.slice(0, 2)) {
 }
 
 // Show a few Cloudinary assets to see what IDs they actually have
-console.log("\n── First 5 Cloudinary public_ids in Pickob/media/ ──────");
+console.log("\n── First 5 Cloudinary public_ids in AppleBD/media/ ──────");
 let count = 0;
 for (const [pid, url] of urlMap.entries()) {
-  if (pid.startsWith("Pickob/media/")) {
+  if (pid.startsWith("AppleBD/media/")) {
     console.log(`  ${pid}`);
     console.log(`  → ${url}`);
     if (++count >= 5) break;

@@ -1,6 +1,6 @@
 # Complete Step-by-Step API Guide (A to Z)
 
-**Pickob E-Commerce API - Beginner's Guide**
+**AppleBD E-Commerce API - Beginner's Guide**
 
 This guide will walk you through every step of using the API, from the very first login to performing all major operations.
 
@@ -33,7 +33,7 @@ This guide will walk you through every step of using the API, from the very firs
 
 2. **Your backend server running**:
    - URL: `https://api.applebd.com` (local development)
-   - OR your production URL: `https://Pickobbackend.onrender.com`
+   - OR your production URL: `https://AppleBD.onrender.com`
 
 3. **Basic information**:
    - Admin email and password (you'll create this)
@@ -46,7 +46,7 @@ This guide will walk you through every step of using the API, from the very firs
 
 ```bash
 # Navigate to backend folder
-cd e:/Pickob/Pickobbackend
+cd e:/AppleBD/AppleBD
 
 # Install dependencies (first time only)
 npm install
@@ -1149,7 +1149,7 @@ Now let's create the actual product!
     "details": "Return unused items with original packaging"
   },
   "seo": {
-    "title": "Buy Wireless Bluetooth Headphones - Pickob",
+    "title": "Buy Wireless Bluetooth Headphones - AppleBD",
     "description": "Shop high-quality wireless Bluetooth headphones with noise cancellation. Free shipping on orders over 999৳",
     "keywords": [
       "wireless headphones",
@@ -1657,7 +1657,7 @@ Body: {status}
 
 **Congratulations!** 🎉
 
-You now know how to use the Pickob API from A to Z!
+You now know how to use the AppleBD API from A to Z!
 
 For more details, check out:
 

@@ -1,7 +1,7 @@
 /**
  * fixImageUrlsDirect.js
  * ─────────────────────────────────────────────────────────────────────────────
- * Cloudinary migration fixed the assets (SmartBuyBD → Pickob) but MongoDB
+ * Cloudinary migration fixed the assets (SmartBuyBD → AppleBD) but MongoDB
  * still stores the old URLs. This script does a direct find-and-replace on
  * every collection that holds image URLs / public_ids.
  *
@@ -28,7 +28,7 @@ await mongoose.connect(process.env.MONGODB_URI);
 console.log("✓ MongoDB connected\n");
 
 const FROM = "SmartBuyBD";
-const TO   = "Pickob";
+const TO   = "AppleBD";
 
 // Deep-replace every string inside any JS value
 const rep = (v) => {

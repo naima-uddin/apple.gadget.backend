@@ -33,7 +33,7 @@ async function main() {
   const URI =
     process.env.MONGODB_URI ||
     process.env.MONGO_URI ||
-    "mongodb://localhost:27017/Pickob";
+    "mongodb://localhost:27017/AppleBD";
   await mongoose.connect(URI);
   console.log("Connected to MongoDB");
 

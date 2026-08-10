@@ -12,13 +12,13 @@ const col = mongoose.connection.collection("products");
 
 // Check how many still have SmartBuyBD
 const stillBroken = await col.countDocuments({ "images.url": { $regex: "SmartBuyBD" } });
-const nowPickob   = await col.countDocuments({ "images.url": { $regex: "Pickob/media" } });
+const nowAppleBD   = await col.countDocuments({ "images.url": { $regex: "AppleBD/media" } });
 
 console.log(`MongoDB — still has SmartBuyBD URLs: ${stillBroken}`);
-console.log(`MongoDB — has Pickob/media URLs:      ${nowPickob}\n`);
+console.log(`MongoDB — has AppleBD/media URLs:      ${nowAppleBD}\n`);
 
-// Show first 3 products with Pickob/media URLs to confirm they look right
-const samples = await col.find({ "images.url": { $regex: "Pickob/media" } }).limit(3).toArray();
+// Show first 3 products with AppleBD/media URLs to confirm they look right
+const samples = await col.find({ "images.url": { $regex: "AppleBD/media" } }).limit(3).toArray();
 for (const p of samples) {
   console.log(`Product: ${p.title?.slice(0, 50)}`);
   for (const img of (p.images || []).slice(0, 2)) {
@@ -26,7 +26,7 @@ for (const p of samples) {
   }
 }
 
-// Live HTTP test on the first Pickob/media URL found
+// Live HTTP test on the first AppleBD/media URL found
 const firstUrl = samples[0]?.images?.[0]?.url;
 if (firstUrl) {
   console.log(`\nTesting URL live: ${firstUrl}`);

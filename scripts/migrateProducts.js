@@ -17,7 +17,7 @@ import "dotenv/config";
 import mongoose from "mongoose";
 
 const MONGODB_URI =
-  process.env.MONGODB_URI || "mongodb://localhost:27017/Pickob";
+  process.env.MONGODB_URI || "mongodb://localhost:27017/AppleBD";
 
 async function run() {
   await mongoose.connect(MONGODB_URI);

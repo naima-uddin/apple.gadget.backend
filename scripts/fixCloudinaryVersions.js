@@ -1,11 +1,11 @@
 /**
  * fixCloudinaryVersions.js
  * ─────────────────────────────────────────────────────────────────────────────
- * After a Cloudinary folder rename (SmartBuyBD → Pickob), the version number
+ * After a Cloudinary folder rename (SmartBuyBD → AppleBD), the version number
  * in all image URLs is stale. Cloudinary returns 404 for URLs with old version.
  *
  * This script:
- *   1. Fetches every asset currently in Pickob/media/ from Cloudinary API
+ *   1. Fetches every asset currently in AppleBD/media/ from Cloudinary API
  *      (gets the fresh, correct secure_url for each public_id)
  *   2. Builds a lookup map:  public_id → correct_url
  *   3. For every product image whose public_id exists in the map,
@@ -35,8 +35,8 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// ── Step 1: fetch ALL assets from Pickob/media/ ───────────────────────────────
-console.log("\nFetching assets from Cloudinary Pickob/media/ ...");
+// ── Step 1: fetch ALL assets from AppleBD/media/ ───────────────────────────────
+console.log("\nFetching assets from Cloudinary AppleBD/media/ ...");
 const urlMap = new Map(); // public_id → secure_url
 
 const fetchFolder = async (prefix) => {
@@ -59,24 +59,24 @@ const fetchFolder = async (prefix) => {
   return count;
 };
 
-const mediaCount = await fetchFolder("Pickob/media/");
-console.log(`  Pickob/media/    → ${mediaCount} assets loaded`);
+const mediaCount = await fetchFolder("AppleBD/media/");
+console.log(`  AppleBD/media/    → ${mediaCount} assets loaded`);
 
-// Also load Pickob/products/ just in case some ended up there
-const prodCount = await fetchFolder("Pickob/products/");
-console.log(`  Pickob/products/ → ${prodCount} assets loaded`);
+// Also load AppleBD/products/ just in case some ended up there
+const prodCount = await fetchFolder("AppleBD/products/");
+console.log(`  AppleBD/products/ → ${prodCount} assets loaded`);
 
 console.log(`  Total URL map size: ${urlMap.size}\n`);
 
 // ── Step 2: fix products ──────────────────────────────────────────────────────
 const col = mongoose.connection.collection("products");
 
-// Find products whose images have a Pickob/media public_id (already renamed in DB)
+// Find products whose images have a AppleBD/media public_id (already renamed in DB)
 const products = await col.find({
-  "images.public_id": { $regex: "Pickob/" },
+  "images.public_id": { $regex: "AppleBD/" },
 }).toArray();
 
-console.log(`Products with Pickob image public_ids: ${products.length}`);
+console.log(`Products with AppleBD image public_ids: ${products.length}`);
 
 let totalImagesFixed = 0;
 let totalProductsFixed = 0;
@@ -93,7 +93,7 @@ for (const p of products) {
       totalImagesFixed++;
       return { ...img, url: freshUrl };
     }
-    if (!freshUrl && img.public_id?.includes("Pickob/")) {
+    if (!freshUrl && img.public_id?.includes("AppleBD/")) {
       totalUnresolved++;
     }
     return img;
@@ -110,7 +110,7 @@ for (const p of products) {
 
 // ── Step 3: fix categories ────────────────────────────────────────────────────
 const catCol = mongoose.connection.collection("categories");
-const cats = await catCol.find({ "images.public_id": { $regex: "Pickob/" } }).toArray();
+const cats = await catCol.find({ "images.public_id": { $regex: "AppleBD/" } }).toArray();
 
 let catFixed = 0;
 for (const c of cats) {

@@ -1,4 +1,4 @@
-# Pickob E-Commerce Platform - API Documentation
+# AppleBD E-Commerce Platform - API Documentation
 
 **Version:** 1.0.0
 **Base URL:** `https://your-backend-domain.com` or `https://api.applebd.com`
@@ -1622,7 +1622,7 @@ POST /api/admin/upload
 ```json
 {
   "url": "https://res.cloudinary.com/.../optimized.webp",
-  "public_id": "Pickob/banners/abc123"
+  "public_id": "AppleBD/banners/abc123"
 }
 ```
 
@@ -1666,7 +1666,7 @@ GET /api/admin/settings
 ```json
 {
   "settings": {
-    "storeName": "Pickob",
+    "storeName": "AppleBD",
     "storeEmail": "support@applebd.com",
     "storePhone": "+8801712345678",
     "topBannerText": "...",
@@ -2385,8 +2385,8 @@ POST /api/admin/banners
   "title": "Summer Sale",
   "desktopImage": "https://...",
   "mobileImage": "https://...",
-  "desktopPublicId": "Pickob/banners/desktop123",
-  "mobilePublicId": "Pickob/banners/mobile123",
+  "desktopPublicId": "AppleBD/banners/desktop123",
+  "mobilePublicId": "AppleBD/banners/mobile123",
   "link": "/shop/summer-sale",
   "isActive": true
 }
@@ -2562,7 +2562,7 @@ GET /api/admin/media/folders
 {
   "folders": [
     { "name": "applebd/products", "path": "applebd/products" },
-    { "name": "Pickob/banners", "path": "Pickob/banners" }
+    { "name": "AppleBD/banners", "path": "AppleBD/banners" }
   ]
 }
 ```
@@ -2579,7 +2579,7 @@ DELETE /api/admin/media
 
 ```json
 {
-  "public_ids": ["applebd/products/prod123", "Pickob/banners/banner456"]
+  "public_ids": ["applebd/products/prod123", "AppleBD/banners/banner456"]
 }
 ```
 
@@ -2589,7 +2589,7 @@ DELETE /api/admin/media
 {
   "deleted": {
     "applebd/products/prod123": "deleted",
-    "Pickob/banners/banner456": "deleted"
+    "AppleBD/banners/banner456": "deleted"
   }
 }
 ```
@@ -3119,7 +3119,7 @@ PORT=5000
 NODE_ENV=production
 
 # Database
-MONGODB_URI=mongodb://localhost:27017/Pickob
+MONGODB_URI=mongodb://localhost:27017/AppleBD
 
 # JWT Secret
 JWT_SECRET=your_super_secret_key_here
@@ -3236,4 +3236,4 @@ For API issues or questions:
 
 **Last Updated:** March 28, 2026
 **API Version:** 1.0.0
-**Maintained by:** Pickob Team
+**Maintained by:** AppleBD Team

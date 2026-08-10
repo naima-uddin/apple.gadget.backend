@@ -71,7 +71,7 @@ const ALLOWED_ORIGINS = new Set(
     .map((o) => o.trim())
     .filter(Boolean),
 );
-// Optional: allow Vercel preview URLs matching a pattern, e.g. ^https://Pickobfrontend-[a-z0-9-]+\.vercel\.app$
+// Optional: allow Vercel preview URLs matching a pattern, e.g. ^https://AppleBDfrontend-[a-z0-9-]+\.vercel\.app$
 const VERCEL_PATTERN = process.env.VERCEL_PROJECT_PATTERN
   ? new RegExp(process.env.VERCEL_PROJECT_PATTERN)
   : null;
@@ -262,7 +262,7 @@ connectMongo()
   .catch(() => {});
 
 app.get("/", (req, res) => {
-  res.send("Welcome to Pickob Backend!");
+  res.send("Welcome to AppleBD Backend!");
 });
 
 app.use("/api/auth", authRoutes); // here have all of the auth related routes like login, register, logout, refresh token etc.

@@ -2886,7 +2886,7 @@ router.get(
 
       res.json({
         user,
-        Pickob: {
+        AppleBD: {
           stats: analytics.stats,
           percentages: analytics.percentages,
           courierBreakdown: analytics.courierBreakdown,
@@ -6512,11 +6512,11 @@ router.delete(
 
 // ─── Migrate Cloudinary folder + all DB image references ─────────────────────
 // POST /api/admin/migrate-cloudinary-folder
-// Body: { from?: "SmartBuyBD", to?: "Pickob" }
+// Body: { from?: "SmartBuyBD", to?: "AppleBD" }
 // Renames every Cloudinary asset under `from/` to `to/` (keeping sub-paths),
 // then updates every image URL / public_id in all MongoDB collections.
 router.post("/migrate-cloudinary-folder", requireAdmin, async (req, res) => {
-  const { from = "SmartBuyBD", to = "Pickob" } = req.body || {};
+  const { from = "SmartBuyBD", to = "AppleBD" } = req.body || {};
   if (!from || !to || from === to) {
     return res
       .status(400)

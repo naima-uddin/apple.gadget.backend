@@ -39,7 +39,7 @@ const demoItems = [
   },
   {
     title: "UNDER 999",
-    subtitle: "Budget Deals",
+    subtitle: "AppleBD Deals",
     link: "/search?badge=under_999",
     image: {
       url: "https://images.unsplash.com/photo-1572635196237-14b3f281503f?w=200&h=100&fit=crop",

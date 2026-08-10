@@ -70,7 +70,7 @@ const sampleBlogs = [
 <li><strong>Best for Sports:</strong> Beats Fit Pro - Secure fit with powerful bass</li>
 </ul>
 
-<h2>Budget Considerations</h2>
+<h2>AppleBD Considerations</h2>
 <p>While flagship models cost $200-300, excellent options exist in the $50-100 range. Brands like Anker Soundcore and JBL offer impressive value for money.</p>`,
     author: "Audio Expert",
     featuredImage: {
@@ -208,7 +208,7 @@ const sampleBlogs = [
 <li><strong>60%:</strong> Minimal layout for enthusiasts</li>
 </ul>
 
-<h2>Budget Recommendations</h2>
+<h2>AppleBD Recommendations</h2>
 <h3>Under $50</h3>
 <p>Redragon K552 - Solid entry-level mechanical keyboard with good build quality.</p>
 

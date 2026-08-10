@@ -735,7 +735,7 @@ process.env.MONGODB_URI_DIRECT ? '(direct fallback configured)' : '(no direct fa
 );
 
 app.get("/", (req, res) => {
-res.send("Welcome to Budget Friendly Backend!");
+res.send("Welcome to AppleBD Backend!");
 });
 
 app.listen(PORT, () => {
@@ -859,7 +859,7 @@ process.env.MONGODB_URI_DIRECT ? '(direct fallback configured)' : '(no direct fa
 );
 
 app.get("/", (req, res) => {
-res.send("Welcome to Budget Friendly Backend!");
+res.send("Welcome to AppleBD Backend!");
 });
 
 app.use('/api/auth', authRoutes);// here have all of the auth related routes like login, register, logout, refresh token etc.

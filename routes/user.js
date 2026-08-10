@@ -1,8 +1,7 @@
 import express from "express";
 import jwt from "jsonwebtoken";
 import multer from "multer";
-import { v2 as cloudinary } from "cloudinary";
-import sharp from "sharp";
+import { saveLocalUpload, destroyAsset } from "../lib/assetStore.js";
 import User from "../models/User.js";
 import { buildUserRewardsSummary } from "../lib/rewards.js";
 import { getUserLoyaltySummary } from "../lib/loyaltyTiers.js";
@@ -12,44 +11,15 @@ const upload = multer({
   storage: multer.memoryStorage(),
   limits: { fileSize: 10 * 1024 * 1024 },
 });
-let cloudinaryConfigured = false;
-const ensureCloudinaryConfigured = () => {
-  if (!cloudinaryConfigured) {
-    cloudinary.config({
-      cloud_name: process.env.CLOUDINARY_CLOUD_NAME,
-      api_key: process.env.CLOUDINARY_API_KEY,
-      api_secret: process.env.CLOUDINARY_API_SECRET,
-    });
-    cloudinaryConfigured = true;
-  }
-};
-
-// Cloudinary signed-upload params for logged-in users — lets the browser
-// upload avatars/review images directly to Cloudinary, bypassing Vercel's
-// 4.5MB serverless body cap. Folder is restricted server-side to avoid abuse.
-const signUpload = (req, res) => {
-  try {
-    ensureCloudinaryConfigured();
-    const timestamp = Math.round(Date.now() / 1000);
-    const base = process.env.CLOUDINARY_FOLDER || "applebd";
-    const allowed = [`${base}/profiles`, `${base}/reviews`];
-    const requested = String(req.query.folder || "");
-    const folder = allowed.includes(requested) ? requested : `${base}/profiles`;
-    const signature = cloudinary.utils.api_sign_request(
-      { folder, timestamp },
-      process.env.CLOUDINARY_API_SECRET,
-    );
-    res.json({
-      signature,
-      timestamp,
-      folder,
-      cloudName: process.env.CLOUDINARY_CLOUD_NAME,
-      apiKey: process.env.CLOUDINARY_API_KEY,
-    });
-  } catch (err) {
-    res.status(500).json({ error: "Failed to generate upload signature" });
-  }
-};
+// Folders logged-in (non-admin) users are allowed to upload into.
+const USER_UPLOAD_FOLDERS = new Set([
+  `${process.env.CLOUDINARY_FOLDER || "applebd"}/profiles`,
+  `${process.env.CLOUDINARY_FOLDER || "applebd"}/reviews`,
+]);
+const resolveUserFolder = (requested) =>
+  USER_UPLOAD_FOLDERS.has(String(requested))
+    ? String(requested)
+    : `${process.env.CLOUDINARY_FOLDER || "applebd"}/profiles`;
 
 // middleware to make sure user is logged in (either user or admin token)
 const requireUser = async (req, res, next) => {
@@ -67,8 +37,25 @@ const requireUser = async (req, res, next) => {
   }
 };
 
-// Signed direct-upload params for avatars/review images (logged-in users).
-router.get("/upload/sign", requireUser, signUpload);
+// Upload an avatar/review image (logged-in users). Stored on the backend's
+// local disk under a restricted set of folders and served from /uploads.
+router.post("/upload", requireUser, upload.single("file"), async (req, res) => {
+  try {
+    if (!req.file) return res.status(400).json({ error: "No file uploaded" });
+    const folder = resolveUserFolder(req.body.folder || req.query.folder);
+    const asset = await saveLocalUpload({
+      buffer: req.file.buffer,
+      mimetype: req.file.mimetype,
+      originalName: req.file.originalname,
+      folder,
+    });
+    res.json({ ok: true, asset });
+  } catch (err) {
+    res
+      .status(400)
+      .json({ error: err.message || "Invalid image file or upload failed." });
+  }
+});
 
 // update profile (name/email/mobile/dob + optional image file or image URL)
 router.put(
@@ -102,79 +89,38 @@ router.put(
       // handle image removal request (only if no new file is being uploaded)
       const wantsRemoveImage = removeImage === "1" || removeImage === "true";
       if (!req.file && wantsRemoveImage && u.imagePublicId) {
-        try {
-          await ensureCloudinaryConfigured();
-          await cloudinary.uploader.destroy(u.imagePublicId);
-        } catch (delErr) {}
+        await destroyAsset(u.imagePublicId);
         u.image = undefined;
         u.imagePublicId = undefined;
       }
 
       // handle image upload if provided (takes precedence over removal flag)
       if (req.file) {
-        // make sure cloudinary credentials exist
-        if (
-          !process.env.CLOUDINARY_CLOUD_NAME ||
-          !process.env.CLOUDINARY_API_KEY ||
-          !process.env.CLOUDINARY_API_SECRET
-        ) {
-          return res
-            .status(500)
-            .json({ error: "Cloudinary not configured on server" });
-        }
-        ensureCloudinaryConfigured();
-
-        // optionally resize/convert using sharp (same pattern as admin)
-        const maxWidth = Number(process.env.IMG_MAX_WIDTH) || 1600;
-        const quality = Number(process.env.IMG_QUALITY) || 75;
-        let optimizedBuffer;
+        let asset;
         try {
-          optimizedBuffer = await sharp(req.file.buffer)
-            .rotate()
-            .resize({ width: maxWidth, withoutEnlargement: true })
-            .webp({ quality })
-            .toBuffer();
-        } catch (sharpErr) {
+          asset = await saveLocalUpload({
+            buffer: req.file.buffer,
+            mimetype: req.file.mimetype,
+            originalName: req.file.originalname,
+            folder: `${process.env.CLOUDINARY_FOLDER || "applebd"}/profiles`,
+          });
+        } catch (uploadErr) {
           return res.status(400).json({ error: "Invalid image file" });
         }
 
-        const streamUpload = (buffer) =>
-          new Promise((resolve, reject) => {
-            const stream = cloudinary.uploader.upload_stream(
-              {
-                folder: `${process.env.CLOUDINARY_FOLDER || 'applebd'}/profiles`,
-                resource_type: "image",
-              },
-              (error, result) => {
-                if (error) reject(error);
-                else resolve(result);
-              },
-            );
-            stream.end(buffer);
-          });
-
-        const result = await streamUpload(optimizedBuffer);
-
         // delete old image if existed
-        if (u.imagePublicId) {
-          try {
-            await cloudinary.uploader.destroy(u.imagePublicId);
-          } catch (delErr) {}
-        }
+        if (u.imagePublicId) await destroyAsset(u.imagePublicId);
 
-        u.image = result.secure_url || result.url;
-        u.imagePublicId = result.public_id;
+        u.image = asset.url;
+        u.imagePublicId = asset.public_id;
       } else if (
         typeof req.body?.imageUrl === "string" &&
         req.body.imageUrl.startsWith("http")
       ) {
-        // Image was uploaded directly to Cloudinary from the browser (bypasses
-        // Vercel's 4.5MB body cap) — we just persist the resulting URL/id.
+        // Image was uploaded directly from the browser (bypasses the body-size
+        // limit) — we just persist the resulting URL/id.
         if (u.imagePublicId && u.imagePublicId !== req.body.imagePublicId) {
-          try {
-            await ensureCloudinaryConfigured();
-            await cloudinary.uploader.destroy(u.imagePublicId);
-          } catch (delErr) {}
+          await destroyAsset(u.imagePublicId);
         }
         u.image = req.body.imageUrl;
         u.imagePublicId = req.body.imagePublicId || undefined;

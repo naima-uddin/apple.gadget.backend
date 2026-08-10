@@ -48,6 +48,7 @@ import cronRoutes from "./routes/cron.js";
 import { syncActiveShipments } from "./lib/shipmentTracking.js";
 import { seedDefaultsIfEmpty } from "./lib/courierDefaults.js";
 import { generalLimiter } from "./lib/rateLimiters.js";
+import { UPLOADS_ROOT } from "./lib/assetStore.js";
 import logger from "./lib/logger.js";
 import { sendAbandonedCartEmail } from "./lib/mailer.js";
 import { redisClient } from "./lib/redis.js";
@@ -109,11 +110,24 @@ app.use(
     contentSecurityPolicy: false,
   }),
 );
+// Serve locally-uploaded media. Files are written under public/uploads with
+// unique (uuid) names, so they're safe to cache aggressively and never change.
+// Mounted before the rate limiter so image requests are never throttled.
+app.use(
+  "/uploads",
+  express.static(UPLOADS_ROOT, {
+    maxAge: "365d",
+    immutable: true,
+    index: false,
+  }),
+);
+
 app.use(morgan(process.env.NODE_ENV === "production" ? "combined" : "dev"));
-// JSON/form bodies never carry raw image bytes (uploads go straight to
-// Cloudinary), but product/blog docs with rich HTML + many image URLs can grow
-// past a couple MB — keep the limit generous so saves never 413 "entity too
-// large". File uploads are capped at 10MB client-side (see lib/uploadImage.js).
+// Image bytes arrive as multipart/form-data (handled by multer per-route), not
+// JSON — but product/blog docs with rich HTML + many image URLs can grow past a
+// couple MB, so keep the JSON limit generous so saves never 413 "entity too
+// large". File uploads are capped at 10MB (client-side + multer, see
+// lib/uploadImage.js and the /upload routes).
 app.use(express.json({ limit: "12mb" }));
 app.use(express.urlencoded({ extended: true, limit: "12mb" }));
 app.use(cookieParser());

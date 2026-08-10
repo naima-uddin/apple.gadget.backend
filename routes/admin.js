@@ -7,6 +7,13 @@ import { permanentlyDeleteProducts } from "../lib/productCleanup.js";
 import mongoose from "mongoose";
 import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
+import {
+  saveLocalUpload,
+  destroyAsset,
+  listLocalMedia,
+  deleteLocalAsset,
+  isLocalPublicId,
+} from "../lib/assetStore.js";
 import Admin from "../models/Admin.js";
 import User from "../models/User.js";
 import CheckoutSession from "../models/CheckoutSession.js";
@@ -28,7 +35,6 @@ import {
   sanitizePermissions,
   hasPermission,
 } from "../lib/permissions.js";
-import sharp from "sharp";
 import categoryRoutes from "./category.js";
 import { defaultTrackingUrl } from "../lib/couriers/constants.js";
 import {
@@ -244,117 +250,35 @@ router.get("/upload/sign", requireAdmin, (req, res) => {
   }
 });
 
-// Image/Video upload to Cloudinary (admin-only) — optimized server-side with sharp
+// Image/Video upload (admin-only) — stored on the backend's local disk under
+// public/uploads and served from ${PUBLIC_UPLOAD_BASE}/uploads. Images are
+// optimized to webp with sharp; videos are stored as-is.
 router.post(
   "/upload",
   requireAdmin,
   upload.single("file"),
   async (req, res) => {
     try {
-      ensureCloudinaryConfigured(); // configure on first use
-
       if (!req.file) return res.status(400).json({ error: "No file uploaded" });
 
-      // fail fast if Cloudinary is not configured correctly
-      if (
-        !process.env.CLOUDINARY_CLOUD_NAME ||
-        !process.env.CLOUDINARY_API_KEY ||
-        !process.env.CLOUDINARY_API_SECRET
-      ) {
-        return res.status(500).json({
-          error:
-            "Server upload not configured (Cloudinary credentials missing).",
-        });
-      }
-
-      // Get folder from request body or query (default to products)
       const folder =
         req.body.folder ||
         req.query.folder ||
         `${process.env.CLOUDINARY_FOLDER || "applebd"}/media`;
 
-      // Detect if file is a video based on mimetype
-      const isVideo = req.file.mimetype.startsWith("video/");
-      const resourceType = isVideo ? "video" : "image";
+      const asset = await saveLocalUpload({
+        buffer: req.file.buffer,
+        mimetype: req.file.mimetype,
+        originalName: req.file.originalname,
+        folder,
+      });
 
-      // For images: optimize with sharp (resize, rotate, convert to webp)
-      if (resourceType === "image") {
-        const maxWidth = Number(process.env.IMG_MAX_WIDTH) || 1600;
-        const quality = Number(process.env.IMG_QUALITY) || 75;
-
-        let optimizedBuffer;
-        try {
-          optimizedBuffer = await sharp(req.file.buffer)
-            .rotate()
-            .resize({ width: maxWidth, withoutEnlargement: true })
-            .webp({ quality })
-            .toBuffer();
-        } catch (sharpErr) {
-          return res
-            .status(400)
-            .json({ error: "Invalid image file or unsupported format." });
-        }
-
-        const streamUpload = (buffer) =>
-          new Promise((resolve, reject) => {
-            const stream = cloudinary.uploader.upload_stream(
-              {
-                folder,
-                resource_type: "image",
-              },
-              (error, result) => {
-                if (error) reject(error);
-                else resolve(result);
-              },
-            );
-            stream.end(buffer);
-          });
-
-        const result = await streamUpload(optimizedBuffer);
-        res.json({
-          ok: true,
-          asset: {
-            public_id: result.public_id,
-            url: result.secure_url || result.url,
-            width: result.width,
-            height: result.height,
-            format: result.format,
-            resourceType: "image",
-          },
-        });
-      } else {
-        // For videos: upload directly without processing
-        const streamUpload = (buffer) =>
-          new Promise((resolve, reject) => {
-            const stream = cloudinary.uploader.upload_stream(
-              {
-                folder,
-                resource_type: "video",
-              },
-              (error, result) => {
-                if (error) reject(error);
-                else resolve(result);
-              },
-            );
-            stream.end(buffer);
-          });
-
-        const result = await streamUpload(req.file.buffer);
-        res.json({
-          ok: true,
-          asset: {
-            public_id: result.public_id,
-            url: result.secure_url || result.url,
-            width: result.width,
-            height: result.height,
-            format: result.format,
-            duration: result.duration,
-            resourceType: "video",
-          },
-        });
-      }
+      res.json({ ok: true, asset });
     } catch (err) {
-      res.status(500).json({ error: err.message || "Upload failed" });
+      // sharp throws on unreadable/unsupported images
+      res.status(400).json({
+        error: err.message || "Invalid image file or unsupported format.",
+      });
     }
   },
 );
@@ -1620,7 +1544,7 @@ router.put(
             ensureCloudinaryConfigured();
             for (const publicId of removed) {
               try {
-                await cloudinary.uploader.destroy(publicId, {
+                await destroyAsset(publicId, {
                   resource_type: "image",
                 });
               } catch {
@@ -3711,7 +3635,7 @@ router.delete(
       if (banner.image?.public_id) {
         try {
           ensureCloudinaryConfigured();
-          await cloudinary.uploader.destroy(banner.image.public_id, {
+          await destroyAsset(banner.image.public_id, {
             resource_type: "image",
           });
         } catch {
@@ -3834,7 +3758,7 @@ router.delete(
       if (panel.image?.public_id) {
         try {
           ensureCloudinaryConfigured();
-          await cloudinary.uploader.destroy(panel.image.public_id, {
+          await destroyAsset(panel.image.public_id, {
             resource_type: "image",
           });
         } catch {
@@ -3951,7 +3875,7 @@ router.delete(
       if (item.avatar?.public_id) {
         try {
           ensureCloudinaryConfigured();
-          await cloudinary.uploader.destroy(item.avatar.public_id, {
+          await destroyAsset(item.avatar.public_id, {
             resource_type: "image",
           });
         } catch {
@@ -4040,7 +3964,7 @@ router.delete(
       if (popup?.image?.public_id) {
         try {
           ensureCloudinaryConfigured();
-          await cloudinary.uploader.destroy(popup.image.public_id, {
+          await destroyAsset(popup.image.public_id, {
             resource_type: "image",
           });
         } catch {
@@ -4102,18 +4026,29 @@ router.get(
         );
       }
 
+      const cloudItems = resources.map((r) => ({
+        public_id: r.public_id,
+        url: r.secure_url || r.url,
+        resource_type: r.resource_type,
+        width: r.width,
+        height: r.height,
+        bytes: r.bytes,
+        format: r.format,
+        created_at: r.created_at,
+        folder: r.folder || r.public_id.split("/").slice(0, -1).join("/"),
+      }));
+
+      // Merge locally-stored uploads (only on the first page — they have no
+      // Cloudinary cursor). New uploads live on local disk, legacy ones on
+      // Cloudinary, so the grid shows both.
+      const localItems = next_cursor
+        ? []
+        : await listLocalMedia({ folder, q });
+
       res.json({
-        items: resources.map((r) => ({
-          public_id: r.public_id,
-          url: r.secure_url || r.url,
-          resource_type: r.resource_type,
-          width: r.width,
-          height: r.height,
-          bytes: r.bytes,
-          format: r.format,
-          created_at: r.created_at,
-          folder: r.folder || r.public_id.split("/").slice(0, -1).join("/"),
-        })),
+        items: [...localItems, ...cloudItems].sort(
+          (a, b) => new Date(b.created_at) - new Date(a.created_at),
+        ),
         next_cursor: imgResult.next_cursor || vidResult.next_cursor || null,
       });
     } catch (err) {
@@ -4148,16 +4083,34 @@ router.delete(
   requirePermission("content"),
   async (req, res) => {
     try {
-      ensureCloudinaryConfigured();
       const { public_ids, resource_type } = req.body || {};
       if (!Array.isArray(public_ids) || public_ids.length === 0) {
         return res.status(400).json({ error: "public_ids array required" });
       }
-      const type = resource_type === "video" ? "video" : "image";
-      const result = await cloudinary.api.delete_resources(public_ids, {
-        resource_type: type,
-      });
-      res.json({ ok: true, deleted: result.deleted });
+
+      // Split into local (on-disk) vs legacy Cloudinary ids and delete each
+      // from its own backing store.
+      const localIds = public_ids.filter((id) => isLocalPublicId(id));
+      const cloudIds = public_ids.filter((id) => !isLocalPublicId(id));
+
+      const deleted = {};
+      await Promise.all(
+        localIds.map(async (id) => {
+          await deleteLocalAsset(id);
+          deleted[id] = "deleted";
+        }),
+      );
+
+      if (cloudIds.length > 0) {
+        ensureCloudinaryConfigured();
+        const type = resource_type === "video" ? "video" : "image";
+        const result = await cloudinary.api.delete_resources(cloudIds, {
+          resource_type: type,
+        });
+        Object.assign(deleted, result.deleted || {});
+      }
+
+      res.json({ ok: true, deleted });
     } catch (err) {
       res.status(500).json({ error: err.message || "Delete failed" });
     }

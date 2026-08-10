@@ -20,6 +20,9 @@
 # production
 /build
 
+# locally-stored user/admin uploads (served from /uploads) — never commit media
+/public/uploads/
+
 # misc
 .DS_Store
 *.pem

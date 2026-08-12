@@ -128,7 +128,6 @@ const ProductSchema = new mongoose.Schema(
     // colors: [{ name: { type: String }, hex: { type: String } }],
     // sizes: [{ type: String }],
 
-    guidelines: { type: String }, // Rich HTML (care & handling instructions)
     specifications: [
       new mongoose.Schema(
         {

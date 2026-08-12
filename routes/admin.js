@@ -4,6 +4,7 @@ import crypto from "crypto";
 import jwt from "jsonwebtoken";
 import { clearProductsCache, clearProductCache } from "../lib/redis.js";
 import { permanentlyDeleteProducts } from "../lib/productCleanup.js";
+import { logActivity, logActivityBulk } from "../lib/activityLog.js";
 import mongoose from "mongoose";
 import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
@@ -22,6 +23,7 @@ import PackagingCost from "../models/PackagingCost.js";
 import DropshippingCost from "../models/DropshippingCost.js";
 import Barcode from "../models/Barcode.js";
 import Product from "../models/Product.js";
+import ActivityLog from "../models/ActivityLog.js";
 import FAQ from "../models/FAQ.js";
 import Variation from "../models/Variation.js";
 import BlogPost from "../models/BlogPost.js";
@@ -319,6 +321,17 @@ router.get("/top-banner", async (req, res) => {
       },
       footerColumns: Array.isArray(s?.footerColumns) ? s.footerColumns : [],
       aboutContent: s?.aboutContent || { hero: {}, features: [], stats: [] },
+      whyChooseUs: s?.whyChooseUs || {
+        enabled: true,
+        title: "",
+        titleBn: "",
+        description: "",
+        descriptionBn: "",
+        image: { url: "", public_id: "" },
+        buttonLabel: "",
+        buttonLink: "/about",
+        items: [],
+      },
     });
   } catch (err) {
     res.json({
@@ -345,6 +358,17 @@ router.get("/top-banner", async (req, res) => {
       footerLinks: { quickLinks: [], customerService: [] },
       footerColumns: [],
       aboutContent: { hero: {}, features: [], stats: [] },
+      whyChooseUs: {
+        enabled: true,
+        title: "",
+        titleBn: "",
+        description: "",
+        descriptionBn: "",
+        image: { url: "", public_id: "" },
+        buttonLabel: "",
+        buttonLink: "/about",
+        items: [],
+      },
     });
   }
 });
@@ -1403,6 +1427,12 @@ router.post(
             .json({ error: barcodeErr.message || "Barcode already exists" });
         }
       }
+      await logActivity({
+        entityId: p._id,
+        entityTitle: p.title,
+        action: "create",
+        admin: req.admin,
+      });
       res.json({
         ok: true,
         product: canSeeBuyingPrice(req.admin) ? p : stripBuyingPrice(p),
@@ -1434,6 +1464,31 @@ router.get(
       res.json({
         product: canSeeBuyingPrice(req.admin) ? p : stripBuyingPrice(p),
       });
+    } catch (err) {
+      res.status(500).json({ error: "Server error" });
+    }
+  },
+);
+
+// GET /api/admin/products/:id/activity — edit history for one product
+// (who created / edited / trashed / restored it and when)
+router.get(
+  "/products/:id/activity",
+  requireAdmin,
+  requirePermission("catalog"),
+  async (req, res) => {
+    try {
+      if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
+        return res.status(400).json({ error: "Invalid product id" });
+      }
+      const items = await ActivityLog.find({
+        entityType: "product",
+        entityId: req.params.id,
+      })
+        .sort({ createdAt: -1 })
+        .limit(200)
+        .lean();
+      res.json({ items });
     } catch (err) {
       res.status(500).json({ error: "Server error" });
     }
@@ -1585,6 +1640,17 @@ router.put(
       } else {
         await detachBarcodeFromProduct(p._id);
       }
+      await logActivity({
+        entityId: p._id,
+        entityTitle: p.title,
+        action: "update",
+        admin: req.admin,
+        meta: {
+          fields: Object.keys(updates).filter(
+            (k) => updates[k] !== undefined,
+          ),
+        },
+      });
       res.json({
         ok: true,
         product: canSeeBuyingPrice(req.admin) ? p : stripBuyingPrice(p),
@@ -1605,8 +1671,15 @@ router.delete(
 
       if (force) {
         // permanent delete — remove Cloudinary images + barcodes + document
+        const doomed = await Product.findById(req.params.id).select("title");
         const deleted = await permanentlyDeleteProducts({ _id: req.params.id });
         if (!deleted) return res.status(404).json({ error: "Not found" });
+        await logActivity({
+          entityId: req.params.id,
+          entityTitle: doomed?.title,
+          action: "permanent-delete",
+          admin: req.admin,
+        });
         return res.json({ ok: true });
       }
 
@@ -1620,6 +1693,12 @@ router.delete(
       await detachBarcodeFromProduct(p._id);
       clearProductsCache();
       clearProductCache(p._id);
+      await logActivity({
+        entityId: p._id,
+        entityTitle: p.title,
+        action: "trash",
+        admin: req.admin,
+      });
       res.json({ ok: true, product: p });
     } catch (err) {
       res.status(500).json({ error: "Server error" });
@@ -1647,10 +1726,24 @@ router.post(
       if (ids.length === 0)
         return res.status(400).json({ error: "No valid product ids provided" });
 
+      // snapshot titles of the products actually being trashed (still live)
+      const trashing = await Product.find({
+        _id: { $in: ids },
+        deletedAt: null,
+      }).select("_id title");
+
       const result = await Product.updateMany(
         { _id: { $in: ids }, deletedAt: null },
         { $set: { deletedAt: new Date(), deletedBy: req.admin._id } },
       );
+      await logActivityBulk({
+        items: trashing.map((p) => ({
+          entityId: p._id,
+          entityTitle: p.title,
+        })),
+        action: "trash",
+        admin: req.admin,
+      });
       // free up any barcodes so trashed products don't hold codes hostage
       await Barcode.updateMany(
         { product: { $in: ids } },
@@ -1680,10 +1773,24 @@ router.post(
       if (ids.length === 0)
         return res.status(400).json({ error: "No valid product ids provided" });
 
+      // snapshot titles of the products actually being restored (still trashed)
+      const restoring = await Product.find({
+        _id: { $in: ids },
+        deletedAt: { $ne: null },
+      }).select("_id title");
+
       const result = await Product.updateMany(
         { _id: { $in: ids }, deletedAt: { $ne: null } },
         { $set: { deletedAt: null }, $unset: { deletedBy: "" } },
       );
+      await logActivityBulk({
+        items: restoring.map((p) => ({
+          entityId: p._id,
+          entityTitle: p.title,
+        })),
+        action: "restore",
+        admin: req.admin,
+      });
       clearProductsCache();
       ids.forEach((id) => clearProductCache(id));
       res.json({ ok: true, restored: result.modifiedCount });
@@ -1706,9 +1813,23 @@ router.post(
       if (ids.length === 0)
         return res.status(400).json({ error: "No valid product ids provided" });
 
+      // snapshot titles before the documents are removed
+      const doomed = await Product.find({
+        _id: { $in: ids },
+        deletedAt: { $ne: null },
+      }).select("_id title");
+
       const deleted = await permanentlyDeleteProducts({
         _id: { $in: ids },
         deletedAt: { $ne: null },
+      });
+      await logActivityBulk({
+        items: doomed.map((p) => ({
+          entityId: p._id,
+          entityTitle: p.title,
+        })),
+        action: "permanent-delete",
+        admin: req.admin,
       });
       res.json({ ok: true, deleted });
     } catch (err) {
@@ -1766,6 +1887,13 @@ router.post(
       }
 
       clearProductsCache();
+      await logActivity({
+        entityId: p._id,
+        entityTitle: p.title,
+        action: "duplicate",
+        admin: req.admin,
+        meta: { sourceId: source._id, sourceTitle: source.title },
+      });
       res.json({
         ok: true,
         product: canSeeBuyingPrice(req.admin) ? p : stripBuyingPrice(p),

@@ -9,6 +9,7 @@ const DiscountSchema = new mongoose.Schema({
   highlightSecondary: { type: String, default: '' },       // optional 2nd line (for 2-line highlights)
   description:        { type: String, default: '' },
   couponCode:         { type: String, default: '' },       // optional coupon code e.g. "SAVE150"
+  image:              { url: { type: String, default: '' }, public_id: { type: String, default: '' } }, // optional card illustration/photo
   theme:              { type: String, default: 'pink' },   // legacy color theme key, superseded by bgColor/buttonColor/textColor
   bgColor:            { type: String, default: '#1D1D1F' }, // card background hex
   buttonColor:        { type: String, default: '#5B21B6' }, // coupon-code button hex

@@ -308,6 +308,24 @@ const SettingsSchema = new mongoose.Schema({
       default: [],
     },
   },
+  // homepage "Why Choose Us" section — fully admin-controlled: heading,
+  // intro paragraph, side image, CTA pill, and its own FAQ/accordion items.
+  // Rendered by components/home/WhyChooseUs.jsx. If `items` is empty the
+  // section falls back to policyContent.faq so existing sites keep working.
+  whyChooseUs: {
+    enabled: { type: Boolean, default: true },
+    title: { type: String, default: "" },
+    titleBn: { type: String, default: "" },
+    description: { type: String, default: "" },
+    descriptionBn: { type: String, default: "" },
+    image: {
+      url: { type: String, default: "" },
+      public_id: { type: String, default: "" },
+    },
+    buttonLabel: { type: String, default: "" },
+    buttonLink: { type: String, default: "/about" },
+    items: { type: [PolicyItemSchema], default: [] },
+  },
   // homepage "Offers" section heading, e.g. "OFFERS! You Can't Miss!!"
   offersTitle: {
     highlight: { type: String, default: "OFFERS!" },

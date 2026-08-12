@@ -317,6 +317,7 @@ router.get("/top-banner", async (req, res) => {
         quickLinks: Array.isArray(s?.footerLinks?.quickLinks) ? s.footerLinks.quickLinks : [],
         customerService: Array.isArray(s?.footerLinks?.customerService) ? s.footerLinks.customerService : [],
       },
+      footerColumns: Array.isArray(s?.footerColumns) ? s.footerColumns : [],
       aboutContent: s?.aboutContent || { hero: {}, features: [], stats: [] },
     });
   } catch (err) {
@@ -342,6 +343,7 @@ router.get("/top-banner", async (req, res) => {
         terms: [],
       },
       footerLinks: { quickLinks: [], customerService: [] },
+      footerColumns: [],
       aboutContent: { hero: {}, features: [], stats: [] },
     });
   }
@@ -467,7 +469,7 @@ router.put("/settings/delivery-charge", requireAdmin, async (req, res) => {
 // editor can save footer/contact/about tabs through the same route.
 router.put("/settings/policy", requireAdmin, async (req, res) => {
   try {
-    const { policyContent, footerInfo, contactInfo, socialLinks, footerLinks, footerLogo, aboutContent } =
+    const { policyContent, footerInfo, contactInfo, socialLinks, footerLinks, footerColumns, footerLogo, aboutContent } =
       req.body || {};
     const $set = {};
     if (policyContent && typeof policyContent === "object")
@@ -476,6 +478,7 @@ router.put("/settings/policy", requireAdmin, async (req, res) => {
     if (contactInfo && typeof contactInfo === "object") $set.contactInfo = contactInfo;
     if (socialLinks && typeof socialLinks === "object") $set.socialLinks = socialLinks;
     if (footerLinks && typeof footerLinks === "object") $set.footerLinks = footerLinks;
+    if (Array.isArray(footerColumns)) $set.footerColumns = footerColumns;
     if (footerLogo && typeof footerLogo === "object") $set.footerLogo = footerLogo;
     if (aboutContent && typeof aboutContent === "object") $set.aboutContent = aboutContent;
     if (Object.keys($set).length === 0)

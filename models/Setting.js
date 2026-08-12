@@ -260,6 +260,21 @@ const SettingsSchema = new mongoose.Schema({
       },
     ],
   },
+  // Fully admin-editable footer navigation columns (title + links).
+  // When non-empty, these supersede the legacy footerLinks columns in the UI.
+  footerColumns: [
+    {
+      title: { type: String, default: "" },
+      links: [
+        {
+          label: { type: String, default: "" },
+          href: { type: String, default: "" },
+          _id: false,
+        },
+      ],
+      _id: false,
+    },
+  ],
   policyContent: {
     shipping: { type: [PolicyItemSchema], default: [] },
     return: { type: [PolicyItemSchema], default: [] },

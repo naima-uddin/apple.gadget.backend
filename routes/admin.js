@@ -255,10 +255,25 @@ router.get("/upload/sign", requireAdmin, (req, res) => {
 // Image/Video upload (admin-only) — stored on the backend's local disk under
 // public/uploads and served from ${PUBLIC_UPLOAD_BASE}/uploads. Images are
 // optimized to webp with sharp; videos are stored as-is.
+// Wrap multer so its errors (notably "File too large" past the fileSize limit)
+// come back as a clear JSON message instead of bubbling to Express's default
+// handler, which aborts the connection and shows the browser only "Failed to
+// fetch".
+const uploadSingle = (req, res, next) =>
+  upload.single("file")(req, res, (err) => {
+    if (!err) return next();
+    const mb = Math.round((upload.limits?.fileSize || 0) / 1024 / 1024);
+    const msg =
+      err.code === "LIMIT_FILE_SIZE"
+        ? `ফাইলটি সর্বোচ্চ সীমার (${mb}MB) চেয়ে বড়। ছোট ফাইল আপলোড করুন।`
+        : err.message || "File upload failed";
+    return res.status(413).json({ error: msg });
+  });
+
 router.post(
   "/upload",
   requireAdmin,
-  upload.single("file"),
+  uploadSingle,
   async (req, res) => {
     try {
       if (!req.file) return res.status(400).json({ error: "No file uploaded" });

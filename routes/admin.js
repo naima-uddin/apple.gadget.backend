@@ -1607,6 +1607,15 @@ router.put(
             ensureCloudinaryConfigured();
             for (const publicId of removed) {
               try {
+                // Duplicated products SHARE the same image files (duplicate
+                // references the assets, it does not re-upload them). Only
+                // physically destroy the file if NO other product still points
+                // at this public_id — otherwise the sibling's image 404s.
+                const stillUsed = await Product.exists({
+                  _id: { $ne: req.params.id },
+                  "images.public_id": publicId,
+                });
+                if (stillUsed) continue;
                 await destroyAsset(publicId, {
                   resource_type: "image",
                 });

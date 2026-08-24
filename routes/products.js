@@ -175,14 +175,19 @@ router.get("/", async (req, res) => {
     if (crueltyFree === "true") filter.crueltyFree = true;
     if (vegan === "true") filter.vegan = true;
 
+    // Every sort includes `_id` as a final tiebreaker so the order is fully
+    // deterministic. Without it, documents with equal primary-key values (e.g.
+    // the same updatedAt after a bulk import) come back in an arbitrary order,
+    // which makes items near a page boundary appear/disappear between otherwise
+    // identical paginated requests.
     const sortMap = {
-      position: { updatedAt: -1 },
-      newest: { createdAt: -1 },
-      oldest: { createdAt: 1 },
-      nameAsc: { title: 1 },
-      nameDesc: { title: -1 },
-      priceHigh: { price: -1 },
-      priceLow: { price: 1 },
+      position: { updatedAt: -1, _id: -1 },
+      newest: { createdAt: -1, _id: -1 },
+      oldest: { createdAt: 1, _id: 1 },
+      nameAsc: { title: 1, _id: 1 },
+      nameDesc: { title: -1, _id: -1 },
+      priceHigh: { price: -1, _id: -1 },
+      priceLow: { price: 1, _id: 1 },
     };
     let sortBy = sortMap[sort] || sortMap.position;
     // When text search is active and no explicit sort was requested, rank by
@@ -198,7 +203,7 @@ router.get("/", async (req, res) => {
         if (cached) {
           res.setHeader(
             "Cache-Control",
-            "public, max-age=30, stale-while-revalidate=120",
+            "no-store",
           );
           return res.json(JSON.parse(cached));
         }
@@ -236,7 +241,7 @@ router.get("/", async (req, res) => {
 
     res.setHeader(
       "Cache-Control",
-      "public, max-age=30, stale-while-revalidate=120",
+      "no-store",
     );
     res.json(payload);
   } catch (err) {
@@ -262,7 +267,7 @@ router.get("/categories", async (req, res) => {
           setCatMemCache(parsed);
           res.setHeader(
             "Cache-Control",
-            "public, max-age=60, stale-while-revalidate=300",
+            "no-store",
           );
           return res.json(parsed);
         }
@@ -307,7 +312,7 @@ router.get("/categories", async (req, res) => {
     }
     res.setHeader(
       "Cache-Control",
-      "public, max-age=60, stale-while-revalidate=300",
+      "no-store",
     );
     res.json(payload);
   } catch (err) {

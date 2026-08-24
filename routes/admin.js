@@ -1030,9 +1030,11 @@ router.patch("/inventory/bulk", requireAdmin, async (req, res) => {
           p.inventory = Math.max(0, Number(inventory));
         }
         await p.save();
+        clearProductCache(id);
         return { id, ok: true };
       }),
     );
+    clearProductsCache();
     res.json({ ok: true, results });
   } catch (err) {
     res.status(500).json({ error: "Server error" });
@@ -1070,6 +1072,8 @@ router.patch("/inventory/:id", requireAdmin, async (req, res) => {
     if (availability) product.availability = availability;
 
     await product.save();
+    clearProductsCache();
+    clearProductCache(req.params.id);
     const hasVariants = product.variants && product.variants.length > 0;
     const totalStock = hasVariants
       ? product.variants.reduce((s, v) => s + (Number(v.inventory) || 0), 0)

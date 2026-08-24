@@ -1472,13 +1472,6 @@ router.get(
         "title price compareAtPrice images slug availability _id",
       );
       if (!p) return res.status(404).json({ error: "Not found" });
-      if (
-        p.status === "draft" &&
-        p.createdBy &&
-        p.createdBy.toString() !== req.admin._id.toString()
-      ) {
-        return res.status(403).json({ error: "Access denied to this draft" });
-      }
       res.json({
         product: canSeeBuyingPrice(req.admin) ? p : stripBuyingPrice(p),
       });
@@ -1593,16 +1586,6 @@ router.put(
         } catch (err) {
           // ignore
         }
-      }
-
-      if (
-        existing.status === "draft" &&
-        existing.createdBy &&
-        existing.createdBy.toString() !== req.admin._id.toString()
-      ) {
-        return res
-          .status(403)
-          .json({ error: "Cannot edit another administrator's draft" });
       }
 
       // Determine images removed by comparing public_id lists

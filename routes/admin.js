@@ -31,7 +31,10 @@ import BlogCategory from "../models/BlogCategory.js";
 import Order from "../models/Order.js";
 import Courier from "../models/Courier.js";
 import TimelinePreset from "../models/TimelinePreset.js";
-import { formatOrderIdSuffix } from "../lib/orderLookup.js";
+import {
+  formatOrderIdSuffix,
+  orderIdMatchConditions,
+} from "../lib/orderLookup.js";
 import {
   requirePermission,
   sanitizePermissions,
@@ -4853,12 +4856,12 @@ router.get(
         filter.paymentMethod = paymentMethod;
       if (q) {
         filter.$or = [
-          { _id: q.match(/^[a-f\d]{24}$/i) ? q : null },
+          ...orderIdMatchConditions(q),
           { "billingDetails.name": { $regex: q, $options: "i" } },
           { "billingDetails.phone": { $regex: q, $options: "i" } },
           { userEmail: { $regex: q, $options: "i" } },
           { transactionId: { $regex: q, $options: "i" } },
-        ].filter((c) => Object.values(c)[0] !== null);
+        ];
       }
       const skip = (parseInt(page) - 1) * parseInt(limit);
       const [ordersRaw, total] = await Promise.all([
@@ -5016,10 +5019,10 @@ router.get(
 
       if (q) {
         const qFilter = [
-          { _id: q.match(/^[a-f\d]{24}$/i) ? q : null },
+          ...orderIdMatchConditions(q),
           { "billingDetails.name": { $regex: q, $options: "i" } },
           { "billingDetails.phone": { $regex: q, $options: "i" } },
-        ].filter((c) => Object.values(c)[0] !== null);
+        ];
         if (filter.$or) {
           filter.$and = [{ $or: filter.$or }, { $or: qFilter }];
           delete filter.$or;

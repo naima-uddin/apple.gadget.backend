@@ -11,6 +11,7 @@ import { v2 as cloudinary } from "cloudinary";
 import {
   saveLocalUpload,
   destroyAsset,
+  copyLocalAsset,
   listLocalMedia,
   deleteLocalAsset,
   isLocalPublicId,
@@ -65,6 +66,7 @@ import {
 import {
   applyOrderStatusChange,
   appendStatusHistory,
+  recordOrderEditor,
 } from "../lib/orderStatus.js";
 import {
   computeCustomerAnalytics,
@@ -1880,6 +1882,23 @@ router.post(
       clone.reviewCount = 0;
       clone.averageRating = 0;
       clone.monthlySold = 0;
+
+      // Give the clone its own independent copy of every locally-stored image so
+      // that later deleting an image on either product never touches the other's
+      // files. Cloudinary-hosted (legacy) images stay referenced; their deletion
+      // is already guarded by a sibling-in-use check on the product update route.
+      if (Array.isArray(clone.images)) {
+        clone.images = await Promise.all(
+          clone.images.map(async (img) => {
+            if (!img || !img.public_id) return img;
+            const copied = await copyLocalAsset(img.public_id, {
+              folder: "applebd/products",
+            });
+            return copied ? { ...img, ...copied } : img;
+          }),
+        );
+      }
+
       if (Array.isArray(clone.variants)) {
         clone.variants = clone.variants.map(({ _id, ...rest }) => ({
           ...rest,
@@ -5302,14 +5321,14 @@ router.put(
       const { status, reason } = req.body;
       if (!VALID.includes(status))
         return res.status(400).json({ error: "Invalid status" });
-      if (!String(reason || "").trim())
-        return res.status(400).json({ error: "Reason is required" });
+      // Reason is optional — a status change no longer requires a note.
       const order = await Order.findById(req.params.id);
       if (!order) return res.status(404).json({ error: "Order not found" });
       applyOrderStatusChange(order, status, {
         reason: String(reason || "").trim(),
         changedBy: String(req.admin?._id || "admin"),
       });
+      recordOrderEditor(order, req.admin);
       if (status === "delivered") {
         await creditOrderRewardPoints(order);
       }
@@ -5346,6 +5365,7 @@ router.put(
       } else if (paymentStatus === "paid") {
         order.paidAmount = order.total || 0;
       }
+      recordOrderEditor(order, req.admin);
       order.updatedAt = new Date();
       await order.save();
       const customerUserId = await resolveCustomerUserId(order);
@@ -5366,7 +5386,7 @@ router.put(
       const order = await Order.findById(req.params.id);
       if (!order) return res.status(404).json({ error: "Order not found" });
 
-      const { items, shipping, discount } = req.body || {};
+      const { items, shipping, discount, total, subtotal } = req.body || {};
 
       if (Array.isArray(items)) {
         if (items.length === 0) {
@@ -5388,6 +5408,10 @@ router.put(
           (sum, item) => sum + item.price * item.quantity,
           0,
         );
+      } else if (typeof subtotal !== "undefined") {
+        // Direct override of the original order (main) amount when the admin
+        // isn't editing individual line items.
+        order.subtotal = Math.max(0, Number(subtotal) || 0);
       }
 
       if (typeof shipping !== "undefined") {
@@ -5397,10 +5421,17 @@ router.put(
         order.discount = Math.max(0, Number(discount) || 0);
       }
 
-      order.total = Math.max(
-        0,
-        (order.subtotal || 0) + (order.shipping || 0) - (order.discount || 0),
-      );
+      if (typeof total !== "undefined") {
+        // Explicit override of the final (main) amount the customer pays. When
+        // omitted we recompute it from subtotal + shipping − discount.
+        order.total = Math.max(0, Number(total) || 0);
+      } else {
+        order.total = Math.max(
+          0,
+          (order.subtotal || 0) + (order.shipping || 0) - (order.discount || 0),
+        );
+      }
+      recordOrderEditor(order, req.admin);
       order.updatedAt = new Date();
       await order.save();
       const customerUserId = await resolveCustomerUserId(order);
@@ -5647,6 +5678,7 @@ router.put(
 
       order.billingDetails = nextBilling;
       order.userEmail = nextBilling.email || order.userEmail || null;
+      recordOrderEditor(order, req.admin);
       order.updatedAt = new Date();
       await order.save();
 

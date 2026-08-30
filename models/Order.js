@@ -62,6 +62,14 @@ const StatusHistorySchema = new mongoose.Schema(
   { _id: false },
 );
 
+const EditedBySchema = new mongoose.Schema(
+  {
+    name: { type: String, default: "" },
+    at: { type: Date, default: Date.now },
+  },
+  { _id: false },
+);
+
 const AssignedAgentSchema = new mongoose.Schema(
   {
     agentId: {
@@ -228,6 +236,9 @@ const OrderSchema = new mongoose.Schema({
   rewardPointsCredited: { type: Boolean, default: false },
   rewardPointsCreditedAt: { type: Date, default: null },
   statusHistory: { type: [StatusHistorySchema], default: [] },
+  // Admins/moderators who have edited this order (status, line-items, customer,
+  // payment). Most-recent last; the dashboard shows the latest few as "by X".
+  editedBy: { type: [EditedBySchema], default: [] },
   returnRequest: { type: ReturnRequestSchema, default: null },
   clientIp: { type: String, default: "" },
   deviceId: { type: String, default: "" },

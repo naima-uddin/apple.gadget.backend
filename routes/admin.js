@@ -5046,16 +5046,28 @@ router.post(
         return res.status(err.status || 400).json({ error: err.message });
       }
 
+      // Products (title/image/variant) are resolved from the DB by the quote,
+      // but the admin may override a line's unit price. clientItems is in the
+      // same order as quote.items, so we can zip them by index.
+      const finalItems = quote.items.map((qi, idx) => {
+        const raw = clientItems[idx]?.price;
+        const hasOverride =
+          raw !== undefined && raw !== null && raw !== "" && Number(raw) >= 0;
+        const price = hasOverride ? Number(raw) : qi.price;
+        return { ...qi, price, lineTotal: price * qi.quantity };
+      });
+      const subtotal = finalItems.reduce(
+        (s, i) => s + i.price * i.quantity,
+        0,
+      );
+
       const computedShipping =
         shipping === undefined || shipping === null || shipping === ""
           ? quote.shipping
           : Math.max(0, Number(shipping) || 0);
       const extraDiscount = Math.max(0, Number(manualDiscount) || 0);
       const discount = (quote.discount || 0) + extraDiscount;
-      const total = Math.max(
-        0,
-        (quote.subtotal || 0) + computedShipping - discount,
-      );
+      const total = Math.max(0, subtotal + computedShipping - discount);
 
       const initialStatus = MANUAL_ORDER_STATUSES.includes(status)
         ? status
@@ -5077,7 +5089,7 @@ router.post(
       const order = new Order({
         userId: linkedUserId,
         userEmail: linkedEmail || null,
-        items: quote.items,
+        items: finalItems,
         billingDetails: {
           name,
           phone,
@@ -5088,7 +5100,7 @@ router.post(
           address: billingDetails.address || null,
           note: String(note ?? billingDetails.note ?? "").trim(),
         },
-        subtotal: quote.subtotal,
+        subtotal,
         shipping: computedShipping,
         discount,
         total,

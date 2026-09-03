@@ -86,6 +86,7 @@ import {
   syncOrderShipment,
 } from "../lib/shipmentTracking.js";
 import { sendOrderCancelledEmail } from "../lib/mailer.js";
+import { resolveAndQuote } from "./orders.js";
 
 const router = express.Router();
 const SALT_ROUNDS = 12; // Increased from 10 for better security
@@ -4950,6 +4951,214 @@ router.get(
           failed,
           revenue: revenueAgg[0]?.total || 0,
         },
+      });
+    } catch (err) {
+      res.status(500).json({ error: "Server error" });
+    }
+  },
+);
+
+// POST /api/admin/orders — manually create an order from the dashboard
+// (phone orders, or converting an abandoned cart / checkout). Line-item prices
+// are computed server-side via resolveAndQuote so product-price integrity is
+// preserved; the admin may override the shipping charge and add a manual
+// discount on top of any coupons. Not subject to the storefront's rate limiter
+// or fake-order protection — this is a trusted admin action.
+const MANUAL_ORDER_STATUSES = [
+  "pending",
+  "accepted",
+  "confirmed",
+  "processing",
+  "shipped",
+  "delivered",
+];
+const MANUAL_PAYMENT_STATUSES = ["unpaid", "cod", "paid"];
+router.post(
+  "/orders",
+  requireAdmin,
+  requirePermission("orders"),
+  async (req, res) => {
+    try {
+      const {
+        billingDetails = {},
+        items: clientItems,
+        paymentMethod = "cash-on-delivery",
+        couponCodes,
+        shipping, // optional shipping override
+        manualDiscount, // optional extra discount on top of coupons
+        status, // optional initial status (default pending)
+        paymentStatus, // optional payment status override
+        note,
+        sourceCartUserId, // clear this user's abandoned cart on success
+        sourceCheckoutId, // mark this checkout session completed on success
+      } = req.body || {};
+
+      const name = String(billingDetails.name || "").trim();
+      const phone = String(billingDetails.phone || "").trim();
+      const city = String(billingDetails.city || "").trim();
+      const zone = String(billingDetails.zone || "").trim();
+
+      if (!Array.isArray(clientItems) || clientItems.length === 0) {
+        return res.status(400).json({ error: "Add at least one product." });
+      }
+      if (!name || !phone || !city || !zone) {
+        return res.status(400).json({
+          error: "Customer name, phone, city and zone are required.",
+        });
+      }
+      if (
+        !["cash-on-delivery", "online", "bkash", "nagad", "rocket"].includes(
+          paymentMethod,
+        )
+      ) {
+        return res.status(400).json({ error: "Invalid payment method." });
+      }
+
+      // Link to an existing customer account when the email/phone matches, so
+      // the order appears in their history and courier-score lookups.
+      let linkedEmail = billingDetails.email
+        ? String(billingDetails.email).trim().toLowerCase()
+        : null;
+      const emailUser = linkedEmail
+        ? await User.findOne({ email: linkedEmail }).select("_id email").lean()
+        : null;
+      const linkedUser =
+        emailUser ||
+        (phone
+          ? await User.findOne({ mobile: phone }).select("_id email").lean()
+          : null);
+      const linkedUserId = linkedUser ? String(linkedUser._id) : null;
+      if (!linkedEmail && linkedUser?.email) linkedEmail = linkedUser.email;
+
+      // Server-authoritative pricing. Points are never redeemed on a manual order.
+      let quote;
+      try {
+        quote = await resolveAndQuote(
+          clientItems,
+          couponCodes || null,
+          linkedUserId,
+          city,
+          0,
+          zone,
+          billingDetails.area || null,
+        );
+      } catch (err) {
+        return res.status(err.status || 400).json({ error: err.message });
+      }
+
+      const computedShipping =
+        shipping === undefined || shipping === null || shipping === ""
+          ? quote.shipping
+          : Math.max(0, Number(shipping) || 0);
+      const extraDiscount = Math.max(0, Number(manualDiscount) || 0);
+      const discount = (quote.discount || 0) + extraDiscount;
+      const total = Math.max(
+        0,
+        (quote.subtotal || 0) + computedShipping - discount,
+      );
+
+      const initialStatus = MANUAL_ORDER_STATUSES.includes(status)
+        ? status
+        : "pending";
+      const isCodLike = [
+        "cash-on-delivery",
+        "bkash",
+        "nagad",
+        "rocket",
+      ].includes(paymentMethod);
+      const resolvedPaymentStatus = MANUAL_PAYMENT_STATUSES.includes(
+        paymentStatus,
+      )
+        ? paymentStatus
+        : isCodLike
+          ? "cod"
+          : "unpaid";
+
+      const order = new Order({
+        userId: linkedUserId,
+        userEmail: linkedEmail || null,
+        items: quote.items,
+        billingDetails: {
+          name,
+          phone,
+          email: linkedEmail || null,
+          city,
+          zone,
+          area: billingDetails.area || null,
+          address: billingDetails.address || null,
+          note: String(note ?? billingDetails.note ?? "").trim(),
+        },
+        subtotal: quote.subtotal,
+        shipping: computedShipping,
+        discount,
+        total,
+        paymentMethod,
+        couponCode: quote.appliedCouponCode || null,
+        appliedCoupons:
+          quote.appliedCoupons?.map((c) => ({
+            code: c.code,
+            discountValue: c.discountValue,
+          })) || [],
+        rewardPointsEarned: quote.rewardPointsEarned || 0,
+        status: initialStatus,
+        paymentStatus: resolvedPaymentStatus,
+        // COD / manual mobile-banking orders auto-confirm 1 hour after placement
+        confirmAfter: isCodLike
+          ? new Date(Date.now() + 60 * 60 * 1000)
+          : null,
+      });
+
+      appendStatusHistory(order, {
+        previousStatus: null,
+        newStatus: initialStatus,
+        reason: "Order created manually from the dashboard",
+        changedBy: req.admin?.name || req.admin?.email || "admin",
+      });
+      recordOrderEditor(order, req.admin);
+
+      await order.save();
+
+      // Track coupon usage exactly like the storefront does
+      if (linkedUserId && quote.appliedCoupons?.length) {
+        const Discount = (await import("../models/Discount.js")).default;
+        const CouponUsage = (await import("../models/CouponUsage.js")).default;
+        for (const coupon of quote.appliedCoupons) {
+          try {
+            await CouponUsage.create({
+              userId: linkedUserId,
+              couponId: coupon._id,
+              orderId: order._id,
+            });
+            await Discount.findByIdAndUpdate(coupon._id, {
+              $inc: { usageCount: 1 },
+            });
+          } catch {}
+        }
+      }
+
+      // Clean up the source abandoned cart / checkout so it drops off those lists
+      if (sourceCartUserId) {
+        User.findByIdAndUpdate(sourceCartUserId, { savedCart: null }).catch(
+          () => {},
+        );
+      }
+      if (sourceCheckoutId) {
+        CheckoutSession.findByIdAndUpdate(sourceCheckoutId, {
+          status: "completed",
+          completedAt: new Date(),
+        }).catch(() => {});
+      } else if (linkedUserId) {
+        CheckoutSession.updateMany(
+          { userId: linkedUserId, status: "incomplete" },
+          { status: "completed", completedAt: new Date() },
+        ).catch(() => {});
+      }
+
+      const customerUserId = await resolveCustomerUserId(order);
+      res.status(201).json({
+        ok: true,
+        orderId: order._id.toString(),
+        order: { ...order.toObject(), customerUserId },
       });
     } catch (err) {
       res.status(500).json({ error: "Server error" });

@@ -1839,3 +1839,8 @@ router.patch("/:id/mobile-payment", async (req, res) => {
 });
 
 export default router;
+
+// Exposed so the admin dashboard can create orders manually (phone orders,
+// abandoned-cart/checkout conversion) with the exact same server-authoritative
+// pricing the storefront uses. Keep this the single source of truth for pricing.
+export { resolveAndQuote };

@@ -625,7 +625,7 @@ router.post("/", orderLimiter, async (req, res) => {
           if (phoneBlocklist.includes(phone)) {
             return res
               .status(400)
-              .json({ error: "এই নম্বর থেকে অর্ডার করা সম্ভব নয়।" });
+              .json({ error: "Orders cannot be placed from this number." });
           }
         }
         if (fop.ipOrder?.enabled && clientIp) {
@@ -636,7 +636,7 @@ router.post("/", orderLimiter, async (req, res) => {
           if (ipBlocklist.includes(clientIp)) {
             return res
               .status(400)
-              .json({ error: "এই IP থেকে অর্ডার করা সম্ভব নয়।" });
+              .json({ error: "Orders cannot be placed from this IP." });
           }
         }
 
@@ -644,7 +644,7 @@ router.post("/", orderLimiter, async (req, res) => {
         const mkSince = (dur, unit) =>
           new Date(now - (unit === "hours" ? dur * 3600000 : dur * 60000));
         const mkLabel = (dur, unit) =>
-          unit === "hours" ? `${dur} ঘণ্টা` : `${dur} মিনিট`;
+          unit === "hours" ? `${dur} hour(s)` : `${dur} minute(s)`;
 
         const phonePromise =
           fop.phoneOrder?.enabled && phone
@@ -656,7 +656,7 @@ router.post("/", orderLimiter, async (req, res) => {
                   createdAt: { $gte: mkSince(dur, unit) },
                 }).then((n) =>
                   n > 0
-                    ? `এই নম্বর থেকে ইতিমধ্যে একটি অর্ডার করা হয়েছে। অনুগ্রহ করে ${mkLabel(dur, unit)} পরে আবার চেষ্টা করুন।`
+                    ? `An order has already been placed from this number. Please try again after ${mkLabel(dur, unit)}.`
                     : null,
                 );
               })()
@@ -672,7 +672,7 @@ router.post("/", orderLimiter, async (req, res) => {
                   createdAt: { $gte: mkSince(dur, unit) },
                 }).then((n) =>
                   n > 0
-                    ? `এই লোকেশন থেকে ইতিমধ্যে একটি অর্ডার করা হয়েছে। অনুগ্রহ করে ${mkLabel(dur, unit)} পরে আবার চেষ্টা করুন।`
+                    ? `An order has already been placed from this location. Please try again after ${mkLabel(dur, unit)}.`
                     : null,
                 );
               })()
@@ -688,7 +688,7 @@ router.post("/", orderLimiter, async (req, res) => {
                   createdAt: { $gte: mkSince(dur, unit) },
                 }).then((n) =>
                   n > 0
-                    ? `এই ডিভাইস থেকে ইতিমধ্যে একটি অর্ডার করা হয়েছে। অনুগ্রহ করে ${mkLabel(dur, unit)} পরে আবার চেষ্টা করুন।`
+                    ? `An order has already been placed from this device. Please try again after ${mkLabel(dur, unit)}.`
                     : null,
                 );
               })()

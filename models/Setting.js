@@ -330,8 +330,8 @@ const SettingsSchema = new mongoose.Schema({
   offersTitle: {
     highlight: { type: String, default: "OFFERS!" },
     rest: { type: String, default: "You Can't Miss!!" },
-    highlightBn: { type: String, default: "অফার!" },
-    restBn: { type: String, default: "মিস করবেন না!!" },
+    highlightBn: { type: String, default: "OFFERS!" },
+    restBn: { type: String, default: "You Can't Miss!!" },
   },
   // homepage "Deal of the Day" — admin-selected product
   dealOfDayProductId: {
@@ -376,6 +376,49 @@ const SettingsSchema = new mongoose.Schema({
         {
           title: { type: String, default: "" },
           tiles: [ShowcaseTileSchema],
+        },
+        { _id: false },
+      ),
+    ],
+  },
+  // mini promotional banner shown right below "Shop by Category" on the
+  // homepage — fully admin-controlled: label, heading + accent word,
+  // subheading, CTA button, discount badge, colors, product photos and a
+  // brand-logo row. Rendered by components/home/CategoryBanner.jsx.
+  categoryBanner: {
+    enabled: { type: Boolean, default: false },
+    label: { type: String, default: "LIMITED TIME DEAL" },
+    heading: { type: String, default: "Best Deals on" },
+    headingAccent: { type: String, default: "Top Brands" },
+    subheading: {
+      type: String,
+      default: "Grab amazing offers on your favorite products.",
+    },
+    buttonText: { type: String, default: "Shop Deals" },
+    buttonLink: { type: String, default: "/products/" },
+    badgePrefix: { type: String, default: "UP TO" },
+    badgeValue: { type: String, default: "30% OFF" },
+    bgColor: { type: String, default: "#111114" },
+    accentColor: { type: String, default: "#F97316" },
+    products: [
+      new mongoose.Schema(
+        {
+          image: {
+            url: { type: String, default: "" },
+            public_id: { type: String, default: "" },
+          },
+        },
+        { _id: false },
+      ),
+    ],
+    brands: [
+      new mongoose.Schema(
+        {
+          image: {
+            url: { type: String, default: "" },
+            public_id: { type: String, default: "" },
+          },
+          link: { type: String, default: "" },
         },
         { _id: false },
       ),

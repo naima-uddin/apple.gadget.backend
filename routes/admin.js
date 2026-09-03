@@ -270,7 +270,7 @@ const uploadSingle = (req, res, next) =>
     const mb = Math.round((upload.limits?.fileSize || 0) / 1024 / 1024);
     const msg =
       err.code === "LIMIT_FILE_SIZE"
-        ? `ফাইলটি সর্বোচ্চ সীমার (${mb}MB) চেয়ে বড়। ছোট ফাইল আপলোড করুন।`
+        ? `The file is larger than the maximum limit (${mb}MB). Please upload a smaller file.`
         : err.message || "File upload failed";
     return res.status(413).json({ error: msg });
   });

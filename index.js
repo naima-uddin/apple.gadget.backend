@@ -593,6 +593,39 @@ app.get("/api/store-hero", async (req, res) => {
   }
 });
 
+// Public: mini promotional banner shown below "Shop by Category" on the
+// homepage — fully admin-controlled. Returns null when disabled/unset so the
+// storefront renders nothing.
+app.get("/api/category-banner", async (req, res) => {
+  try {
+    const { default: Setting } = await import("./models/Setting.js");
+    const s = await Setting.findOne().lean();
+    const cfg = s?.categoryBanner;
+    if (!cfg || !cfg.enabled) return res.json({ banner: null });
+    res.json({
+      banner: {
+        image: cfg.image?.url ? cfg.image : null,
+        mobileImage: cfg.mobileImage?.url ? cfg.mobileImage : null,
+        link: cfg.link || "/",
+        label: cfg.label || "",
+        heading: cfg.heading || "",
+        headingAccent: cfg.headingAccent || "",
+        subheading: cfg.subheading || "",
+        buttonText: cfg.buttonText || "",
+        buttonLink: cfg.buttonLink || "/",
+        badgePrefix: cfg.badgePrefix || "",
+        badgeValue: cfg.badgeValue || "",
+        bgColor: cfg.bgColor || "#111114",
+        accentColor: cfg.accentColor || "#F97316",
+        products: (cfg.products || []).filter((p) => p?.image?.url),
+        brands: (cfg.brands || []).filter((b) => b?.image?.url),
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 // Public: homepage bento category showcase.
 // Always returns { pages: [{ title, tiles: [{image, label, link}] }] } —
 // legacy single-page configs (tiles / categoryIds) are normalized into one page.

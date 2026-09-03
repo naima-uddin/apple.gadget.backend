@@ -9,6 +9,7 @@ export const FIXED_REGISTRY = [
   { key: 'banner', label: 'Hero Banner (Slider)' },
   { key: 'storeHero', label: 'Store Hero (Mini Category)' },
   { key: 'shopByCategory', label: 'Shop by Category' },
+  { key: 'categoryBanner', label: 'Category Banner (Mini Promo)' },
   { key: 'adSlot', label: 'Ad Slot' },
   { key: 'categoryShowcase', label: 'Category Showcase' },
   { key: 'whyChooseUs', label: 'Why Choose Us' },

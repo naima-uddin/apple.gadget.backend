@@ -387,6 +387,19 @@ const SettingsSchema = new mongoose.Schema({
   // brand-logo row. Rendered by components/home/CategoryBanner.jsx.
   categoryBanner: {
     enabled: { type: Boolean, default: false },
+    // Direct-image mode: when image.url is set, the whole banner is just this
+    // uploaded image (clickable to `link`) and the structured fields below are
+    // ignored. Admin designs the banner externally and uploads it.
+    image: {
+      url: { type: String, default: "" },
+      public_id: { type: String, default: "" },
+    },
+    // separate mobile image (optional) — used on small screens if provided
+    mobileImage: {
+      url: { type: String, default: "" },
+      public_id: { type: String, default: "" },
+    },
+    link: { type: String, default: "/products/" },
     label: { type: String, default: "LIMITED TIME DEAL" },
     heading: { type: String, default: "Best Deals on" },
     headingAccent: { type: String, default: "Top Brands" },

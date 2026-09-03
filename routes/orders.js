@@ -577,6 +577,23 @@ router.post("/quote", async (req, res) => {
   }
 });
 
+// POST /api/orders/shipping-quote — delivery charge from an address alone
+// (no cart items). Used by the admin manual-order form so the charge can be
+// shown as soon as an address is picked, before any product is added.
+router.post("/shipping-quote", async (req, res) => {
+  try {
+    const { city, zone, area } = req.body || {};
+    const shipping = await calcBaseShipping(
+      city || null,
+      zone || null,
+      area || null,
+    );
+    res.json({ shipping, insideDhaka: isDhaka(city) });
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 // ── POST /api/orders ──────────────────────────────────────────────────────────
 // Creates an order. Returns { ok, orderId, method } for COD or
 // { ok, orderId, method, url } for online/bkash (SSLCommerz payment URL).

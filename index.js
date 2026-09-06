@@ -43,6 +43,7 @@ import checkoutSessionsRouter from "./routes/checkoutSessions.js";
 import analyticsRoutes from "./routes/analytics.js";
 import brandRoutes from "./routes/brands.js";
 import contactRoutes from "./routes/contact.js";
+import newsletterRoutes from "./routes/newsletter.js";
 import cartRoutes from "./routes/cart.js";
 import cronRoutes from "./routes/cron.js";
 import { syncActiveShipments } from "./lib/shipmentTracking.js";
@@ -283,6 +284,7 @@ app.use("/api/checkout-sessions", checkoutSessionsRouter);
 app.use("/api/analytics", analyticsRoutes); // checkout session tracking for abandoned checkout feature
 app.use("/api/brands", brandRoutes);
 app.use("/api/contact", contactRoutes);
+app.use("/api/newsletter", newsletterRoutes); // public footer newsletter subscribe
 app.use("/api/cart", cartRoutes); // shareable cart links
 app.use("/api/cron", cronRoutes); // external-pinger-triggered background jobs (Vercel-safe)
 

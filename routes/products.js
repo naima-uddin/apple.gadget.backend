@@ -184,6 +184,7 @@ router.get("/", async (req, res) => {
       position: { updatedAt: -1, _id: -1 },
       newest: { createdAt: -1, _id: -1 },
       oldest: { createdAt: 1, _id: 1 },
+      topSold: { monthlySold: -1, _id: -1 },
       nameAsc: { title: 1, _id: 1 },
       nameDesc: { title: -1, _id: -1 },
       priceHigh: { price: -1, _id: -1 },

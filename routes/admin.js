@@ -10,6 +10,7 @@ import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
 import {
   saveLocalUpload,
+  requestUploadBase,
   destroyAsset,
   copyLocalAsset,
   listLocalMedia,
@@ -294,6 +295,7 @@ router.post(
         mimetype: req.file.mimetype,
         originalName: req.file.originalname,
         folder,
+        baseUrl: requestUploadBase(req),
       });
 
       res.json({ ok: true, asset });

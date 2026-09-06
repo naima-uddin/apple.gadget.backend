@@ -593,6 +593,24 @@ app.get("/api/store-hero", async (req, res) => {
   }
 });
 
+// Public: poster-style typographic hero shown above "Why Choose Us" on the
+// homepage — giant word + up to 4 admin-uploaded images tucked between the
+// letters. Returns enabled:false so the storefront can render nothing.
+app.get("/api/typographic-hero", async (req, res) => {
+  try {
+    const { default: Setting } = await import("./models/Setting.js");
+    const s = await Setting.findOne().lean();
+    const cfg = s?.typographicHero || {};
+    res.json({
+      enabled: cfg.enabled !== false,
+      word: cfg.word || "GADGETS",
+      images: (cfg.images || []).filter((im) => im && im.url),
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 // Public: mini promotional banner shown below "Shop by Category" on the
 // homepage — fully admin-controlled. Returns null when disabled/unset so the
 // storefront renders nothing.

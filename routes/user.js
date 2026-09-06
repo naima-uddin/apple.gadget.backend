@@ -1,7 +1,11 @@
 import express from "express";
 import jwt from "jsonwebtoken";
 import multer from "multer";
-import { saveLocalUpload, destroyAsset } from "../lib/assetStore.js";
+import {
+  saveLocalUpload,
+  requestUploadBase,
+  destroyAsset,
+} from "../lib/assetStore.js";
 import User from "../models/User.js";
 import { buildUserRewardsSummary } from "../lib/rewards.js";
 import { getUserLoyaltySummary } from "../lib/loyaltyTiers.js";
@@ -48,6 +52,7 @@ router.post("/upload", requireUser, upload.single("file"), async (req, res) => {
       mimetype: req.file.mimetype,
       originalName: req.file.originalname,
       folder,
+      baseUrl: requestUploadBase(req),
     });
     res.json({ ok: true, asset });
   } catch (err) {
@@ -103,6 +108,7 @@ router.put(
             mimetype: req.file.mimetype,
             originalName: req.file.originalname,
             folder: `${process.env.CLOUDINARY_FOLDER || "applebd"}/profiles`,
+            baseUrl: requestUploadBase(req),
           });
         } catch (uploadErr) {
           return res.status(400).json({ error: "Invalid image file" });

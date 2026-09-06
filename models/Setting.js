@@ -322,6 +322,17 @@ const SettingsSchema = new mongoose.Schema({
       url: { type: String, default: "" },
       public_id: { type: String, default: "" },
     },
+    // Up to 4 photos for the left-side collage. Falls back to `image` (and
+    // then a built-in default) when empty, so older sites keep working.
+    images: {
+      type: [
+        {
+          url: { type: String, default: "" },
+          public_id: { type: String, default: "" },
+        },
+      ],
+      default: [],
+    },
     buttonLabel: { type: String, default: "" },
     buttonLink: { type: String, default: "/about" },
     items: { type: [PolicyItemSchema], default: [] },
@@ -358,6 +369,22 @@ const SettingsSchema = new mongoose.Schema({
           label: { type: String, default: "" },
           link: { type: String, default: "/" },
           isActive: { type: Boolean, default: true },
+        },
+        { _id: false },
+      ),
+    ],
+  },
+  // poster-style typographic hero shown above "Why Choose Us" on the
+  // homepage: one giant display word with up to 4 admin-uploaded images
+  // tucked between the letters. Rendered by components/home/TypographicHero.jsx.
+  typographicHero: {
+    enabled: { type: Boolean, default: true },
+    word: { type: String, default: "GADGETS" },
+    images: [
+      new mongoose.Schema(
+        {
+          url: { type: String, default: "" },
+          public_id: { type: String, default: "" },
         },
         { _id: false },
       ),

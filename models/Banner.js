@@ -1,7 +1,8 @@
 import mongoose from 'mongoose';
 
 const BannerSchema = new mongoose.Schema({
-  image:      { url: { type: String, default: '' }, public_id: { type: String, default: '' } },
+  image:      { url: { type: String, default: '' }, public_id: { type: String, default: '' } }, // LEFT side image
+  rightImage: { url: { type: String, default: '' }, public_id: { type: String, default: '' } }, // RIGHT side image (new hero design)
   title:      { type: String, default: '' },   // left side big title, e.g. "Sound Max Pro"
   subtitle:   { type: String, default: '' },   // left side description
   buttonText: { type: String, default: 'Shop Now' },

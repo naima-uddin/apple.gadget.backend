@@ -464,6 +464,24 @@ const SettingsSchema = new mongoose.Schema({
       ),
     ],
   },
+  // Thin, very-small-height promotional strip shown in the homepage slot that
+  // previously held Store Hero (the mini category-icon row). Direct-image only:
+  // admin uploads a wide/short banner image (optional separate mobile image),
+  // it becomes the whole clickable strip. Rendered by components/home/PromoBanner.jsx.
+  promoBanner: {
+    enabled: { type: Boolean, default: false },
+    image: {
+      url: { type: String, default: "" },
+      public_id: { type: String, default: "" },
+    },
+    mobileImage: {
+      url: { type: String, default: "" },
+      public_id: { type: String, default: "" },
+    },
+    link: { type: String, default: "/products/" },
+    // desktop strip height in px; keep it short for a premium thin banner
+    height: { type: Number, default: 90 },
+  },
   updatedAt: { type: Date, default: Date.now },
 });
 

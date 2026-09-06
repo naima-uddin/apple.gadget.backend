@@ -644,6 +644,28 @@ app.get("/api/category-banner", async (req, res) => {
   }
 });
 
+// Public: thin promotional strip shown in the homepage slot that previously
+// held Store Hero. Direct-image only. Returns null when disabled/unset so the
+// storefront renders nothing.
+app.get("/api/promo-banner", async (req, res) => {
+  try {
+    const { default: Setting } = await import("./models/Setting.js");
+    const s = await Setting.findOne().lean();
+    const cfg = s?.promoBanner;
+    if (!cfg || !cfg.enabled || !cfg.image?.url) return res.json({ banner: null });
+    res.json({
+      banner: {
+        image: cfg.image,
+        mobileImage: cfg.mobileImage?.url ? cfg.mobileImage : null,
+        link: cfg.link || "/",
+        height: cfg.height || 90,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 // Public: homepage bento category showcase.
 // Always returns { pages: [{ title, tiles: [{image, label, link}] }] } —
 // legacy single-page configs (tiles / categoryIds) are normalized into one page.

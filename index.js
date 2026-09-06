@@ -658,7 +658,9 @@ app.get("/api/promo-banner", async (req, res) => {
         image: cfg.image,
         mobileImage: cfg.mobileImage?.url ? cfg.mobileImage : null,
         link: cfg.link || "/",
-        height: cfg.height || 90,
+        height: cfg.height || 64,
+        timerEnabled: !!cfg.timerEnabled,
+        timerEndsAt: cfg.timerEnabled ? cfg.timerEndsAt || "" : "",
       },
     });
   } catch (err) {

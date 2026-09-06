@@ -480,7 +480,12 @@ const SettingsSchema = new mongoose.Schema({
     },
     link: { type: String, default: "/products/" },
     // desktop strip height in px; keep it short for a premium thin banner
-    height: { type: Number, default: 90 },
+    height: { type: Number, default: 64 },
+    // optional countdown timer overlaid at the top of the strip (flash-sale
+    // style). timerEndsAt is a datetime-local string (e.g. "2026-09-10T18:00");
+    // the storefront counts down to it and hides the timer once it passes.
+    timerEnabled: { type: Boolean, default: false },
+    timerEndsAt: { type: String, default: "" },
   },
   updatedAt: { type: Date, default: Date.now },
 });

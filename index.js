@@ -670,6 +670,105 @@ app.get("/api/promo-banner", async (req, res) => {
   }
 });
 
+// Public: tabbed "Featured Products" showcase (homepage, after categories).
+// Resolves each tab's products server-side so the storefront just renders.
+// Returns { showcase: null } when disabled or when no tab has any products.
+app.get("/api/featured-showcase", async (req, res) => {
+  try {
+    const { default: Setting } = await import("./models/Setting.js");
+    const { default: Product } = await import("./models/Product.js");
+    const s = await Setting.findOne().lean();
+    const cfg = s?.featuredShowcase || {};
+    if (cfg.enabled === false) return res.json({ showcase: null });
+
+    // Card-sized projection — enough for the showcase, no heavy arrays.
+    const SELECT =
+      "_id title slug description price compareAtPrice images badges " +
+      "averageRating reviewCount freeShipping variants availability inventory monthlySold featured";
+
+    // Default tabs when the admin hasn't configured any.
+    const DEFAULT_TABS = [
+      { label: "Latest", type: "latest", enabled: true },
+      { label: "Top Seller", type: "top", enabled: true },
+      { label: "Featured", type: "featured", enabled: true },
+      { label: "Trending", type: "trending", enabled: true },
+    ];
+    const tabs =
+      Array.isArray(cfg.tabs) && cfg.tabs.length ? cfg.tabs : DEFAULT_TABS;
+
+    const base = { deletedAt: null, status: "published" };
+    const LIMIT = 8;
+
+    const resolveTab = async (tab) => {
+      if (tab.enabled === false) return null;
+      let products = [];
+      if (tab.type === "manual") {
+        const ids = (tab.productIds || []).map(String);
+        if (ids.length) {
+          const found = await Product.find({ ...base, _id: { $in: ids } })
+            .select(SELECT)
+            .lean();
+          // preserve the admin's hand-picked order
+          const byId = Object.fromEntries(found.map((p) => [String(p._id), p]));
+          products = ids.map((id) => byId[id]).filter(Boolean);
+          // Apply the admin's per-product showcase-image override and expose it
+          // as `showcaseImage` so the storefront uses it as the hero instead of
+          // the default 2nd image. The override value is either a custom
+          // uploaded image URL (string) or the index of one of the product's own
+          // images (number).
+          const imageMap = tab.imageMap || {};
+          products = products.map((p) => {
+            const val = imageMap[String(p._id)];
+            let url = "";
+            if (typeof val === "string" && val.trim()) {
+              url = val.trim();
+            } else if (
+              Number.isInteger(val) &&
+              p.images &&
+              p.images[val] &&
+              p.images[val].url
+            ) {
+              url = p.images[val].url;
+            }
+            return url ? { ...p, showcaseImage: url } : p;
+          });
+        }
+      } else {
+        const filter = { ...base };
+        let sort = { createdAt: -1, _id: -1 };
+        if (tab.type === "top") sort = { monthlySold: -1, _id: -1 };
+        else if (tab.type === "featured") filter.featured = true;
+        else if (tab.type === "trending") filter.badges = "trending";
+        products = await Product.find(filter)
+          .select(SELECT)
+          .sort(sort)
+          .limit(LIMIT)
+          .lean();
+      }
+      if (!products.length) return null;
+      return {
+        label: tab.label || tab.type,
+        type: tab.type || "latest",
+        products: products.slice(0, LIMIT),
+      };
+    };
+
+    const resolved = (await Promise.all(tabs.map(resolveTab))).filter(Boolean);
+    if (!resolved.length) return res.json({ showcase: null });
+
+    res.setHeader("Cache-Control", "no-store");
+    res.json({
+      showcase: {
+        title: cfg.title || "Featured Products",
+        subtitle: cfg.subtitle || "",
+        tabs: resolved,
+      },
+    });
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 // Public: homepage bento category showcase.
 // Always returns { pages: [{ title, tiles: [{image, label, link}] }] } —
 // legacy single-page configs (tiles / categoryIds) are normalized into one page.

@@ -65,6 +65,7 @@ router.get("/", async (req, res) => {
     const {
       q,
       suggest,
+      ids,
       categoryId,
       badge,
       flag,
@@ -89,6 +90,15 @@ router.get("/", async (req, res) => {
     const skip = (Math.max(1, page) - 1) * limit;
     const filter = { deletedAt: null }; // never surface trashed products
     if (status) filter.status = status;
+    // Fetch a specific set of products by id (comma-separated). Used by admin
+    // pickers to hydrate saved selections; keeps only valid ObjectIds.
+    if (ids) {
+      const list = String(ids)
+        .split(",")
+        .map((id) => id.trim())
+        .filter((id) => /^[a-f\d]{24}$/i.test(id));
+      filter._id = { $in: list.length ? list : [null] };
+    }
     if (categoryId) {
       // allow comma-separated list of ids
       const ids = String(categoryId)

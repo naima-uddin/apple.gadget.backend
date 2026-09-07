@@ -487,6 +487,39 @@ const SettingsSchema = new mongoose.Schema({
     timerEnabled: { type: Boolean, default: false },
     timerEndsAt: { type: String, default: "" },
   },
+  // Tabbed "Featured Products" showcase shown right after the category grid on
+  // the homepage (Starbucks-style curved panel). Rendered by
+  // components/home/FeaturedShowcase.jsx; served resolved via
+  // GET /api/featured-showcase. Each tab is either an auto feed (latest / top
+  // seller / featured flag / trending badge) or a manual hand-picked list.
+  featuredShowcase: {
+    enabled: { type: Boolean, default: true },
+    title: { type: String, default: "Featured Products" },
+    subtitle: {
+      type: String,
+      default: "Handpicked gadgets, refreshed for you.",
+    },
+    tabs: {
+      type: [
+        {
+          label: { type: String, default: "" },
+          // latest | top | featured | trending | manual
+          type: { type: String, default: "latest" },
+          productIds: [
+            { type: mongoose.Schema.Types.ObjectId, ref: "Product" },
+          ],
+          // Per-product showcase-image override for manual tabs. Maps a product
+          // id (string) to the index of the product image the admin wants shown
+          // as the big hero in the showcase. Missing/absent => storefront falls
+          // back to the product's 2nd image (then 1st). Stored as a plain object
+          // so it serialises cleanly to/from JSON on the admin editor.
+          imageMap: { type: mongoose.Schema.Types.Mixed, default: {} },
+          enabled: { type: Boolean, default: true },
+        },
+      ],
+      default: undefined, // undefined => storefront falls back to default tabs
+    },
+  },
   updatedAt: { type: Date, default: Date.now },
 });
 

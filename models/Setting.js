@@ -499,13 +499,6 @@ const SettingsSchema = new mongoose.Schema({
       type: String,
       default: "Handpicked gadgets, refreshed for you.",
     },
-    // Admin-uploaded background image for the dark curved panel on the right.
-    // The storefront renders it blurred behind the order block. When empty, it
-    // falls back to a blurred copy of the active product's hero image.
-    panelImage: {
-      url: { type: String, default: "" },
-      public_id: { type: String, default: "" },
-    },
     tabs: {
       type: [
         {

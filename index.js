@@ -768,7 +768,6 @@ app.get("/api/featured-showcase", async (req, res) => {
       showcase: {
         title: cfg.title || "Featured Products",
         subtitle: cfg.subtitle || "",
-        panelImage: cfg.panelImage?.url || "",
         tabs: resolved,
       },
     });

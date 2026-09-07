@@ -717,6 +717,7 @@ app.get("/api/featured-showcase", async (req, res) => {
           // uploaded image URL (string) or the index of one of the product's own
           // images (number).
           const imageMap = tab.imageMap || {};
+          const qtyMap = tab.qtyMap || {};
           products = products.map((p) => {
             const val = imageMap[String(p._id)];
             let url = "";
@@ -730,7 +731,13 @@ app.get("/api/featured-showcase", async (req, res) => {
             ) {
               url = p.images[val].url;
             }
-            return url ? { ...p, showcaseImage: url } : p;
+            // per-product add-to-cart quantity (default 1)
+            const q = qtyMap[String(p._id)];
+            const showcaseQty =
+              Number.isInteger(q) && q > 0 ? q : 1;
+            const next = { ...p, showcaseQty };
+            if (url) next.showcaseImage = url;
+            return next;
           });
         }
       } else {
@@ -761,6 +768,7 @@ app.get("/api/featured-showcase", async (req, res) => {
       showcase: {
         title: cfg.title || "Featured Products",
         subtitle: cfg.subtitle || "",
+        panelImage: cfg.panelImage?.url || "",
         tabs: resolved,
       },
     });

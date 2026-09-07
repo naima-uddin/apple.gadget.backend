@@ -499,6 +499,13 @@ const SettingsSchema = new mongoose.Schema({
       type: String,
       default: "Handpicked gadgets, refreshed for you.",
     },
+    // Admin-uploaded background image for the dark curved panel on the right.
+    // The storefront renders it blurred behind the order block. When empty, it
+    // falls back to a blurred copy of the active product's hero image.
+    panelImage: {
+      url: { type: String, default: "" },
+      public_id: { type: String, default: "" },
+    },
     tabs: {
       type: [
         {
@@ -514,6 +521,10 @@ const SettingsSchema = new mongoose.Schema({
           // back to the product's 2nd image (then 1st). Stored as a plain object
           // so it serialises cleanly to/from JSON on the admin editor.
           imageMap: { type: mongoose.Schema.Types.Mixed, default: {} },
+          // Per-product "Add to cart" quantity for manual tabs. Maps a product
+          // id (string) to how many units the Add-to-cart / Buy-now buttons add
+          // at once. Missing => 1.
+          qtyMap: { type: mongoose.Schema.Types.Mixed, default: {} },
           enabled: { type: Boolean, default: true },
         },
       ],

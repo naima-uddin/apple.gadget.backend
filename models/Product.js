@@ -7,6 +7,10 @@ const VariantSchema = new mongoose.Schema({
     hex: { type: String }, // e.g., "#FF000
   },
   size: { type: String }, // e.g., "L" or "16 inch"
+  // image mapped to this variant, chosen from the product's uploaded images.
+  // Stores the image URL so the storefront can switch the gallery/card image
+  // when this variant's color is selected.
+  image: { type: String },
   buyingPrice: { type: Number },
   price: { type: Number, required: true },
   compareAtPrice: { type: Number },

@@ -3069,7 +3069,7 @@ router.get(
         lifetime,
         orders: orders.map((order) => ({
           ...order,
-          orderId: formatOrderIdSuffix(order._id),
+          orderId: order.orderNumber || formatOrderIdSuffix(order._id),
         })),
       });
     } catch (err) {
@@ -4786,7 +4786,7 @@ router.get(
         : new Date(Date.now() - 24 * 60 * 60 * 1000);
       const orders = await Order.find(
         { createdAt: { $gt: since } },
-        "billingDetails userEmail total status paymentMethod createdAt",
+        "orderNumber billingDetails userEmail total status paymentMethod createdAt",
       )
         .sort({ createdAt: -1 })
         .limit(20)
@@ -4798,7 +4798,7 @@ router.get(
         serverTime: new Date(),
         orders: orders.map((o) => ({
           _id: o._id,
-          orderId: formatOrderIdSuffix(o._id),
+          orderId: o.orderNumber || formatOrderIdSuffix(o._id),
           customerName: o.billingDetails?.name || o.userEmail || "Guest",
           total: o.total,
           status: o.status,
@@ -4897,7 +4897,7 @@ router.get(
       const orders = await Promise.all(
         ordersRaw.map(async (order) => ({
           ...order,
-          orderId: formatOrderIdSuffix(order._id),
+          orderId: order.orderNumber || formatOrderIdSuffix(order._id),
           customerUserId: await resolveCustomerUserId(order),
         })),
       );
@@ -5195,6 +5195,7 @@ router.get(
         { "statusHistory.0": { $exists: true } },
         {
           _id: 1,
+          orderNumber: 1,
           "billingDetails.name": 1,
           "billingDetails.phone": 1,
           status: 1,
@@ -5212,7 +5213,8 @@ router.get(
         for (const ev of order.statusHistory || []) {
           events.push({
             orderId: order._id,
-            orderIdShort: String(order._id).slice(-8).toUpperCase(),
+            orderIdShort:
+              order.orderNumber || String(order._id).slice(-8).toUpperCase(),
             customerName: order.billingDetails?.name || "—",
             customerPhone: order.billingDetails?.phone || "",
             orderTotal: order.total,
@@ -5285,7 +5287,7 @@ router.get(
       const orders = await Promise.all(
         ordersRaw.map(async (order) => ({
           ...order,
-          orderId: formatOrderIdSuffix(order._id),
+          orderId: order.orderNumber || formatOrderIdSuffix(order._id),
           customerUserId: await resolveCustomerUserId(order),
         })),
       );
@@ -5512,7 +5514,7 @@ router.get(
 
       res.json({
         ...orderObj,
-        orderId: formatOrderIdSuffix(orderObj._id),
+        orderId: orderObj.orderNumber || formatOrderIdSuffix(orderObj._id),
         customerTags,
         customerUserId,
         courierName: courierDoc?.name || orderObj.shipment?.courier || null,
@@ -5711,7 +5713,7 @@ router.get(
         const items = await enrichOrderItemsWithRewardPoints(order.items);
         orderRows.push({
           _id: order._id,
-          orderId: formatOrderIdSuffix(order._id),
+          orderId: order.orderNumber || formatOrderIdSuffix(order._id),
           userId: order.userId,
           customerName: order.billingDetails?.name,
           status: order.status,
@@ -5809,7 +5811,7 @@ router.put(
       await order.save();
       res.json({
         ...order.toObject(),
-        orderId: formatOrderIdSuffix(order._id),
+        orderId: order.orderNumber || formatOrderIdSuffix(order._id),
       });
     } catch (err) {
       res.status(500).json({ error: "Server error" });
@@ -5834,7 +5836,7 @@ router.get("/admins/:id/pick-profile", requireAdmin, async (req, res) => {
 
     const orders = ordersRaw.map((o) => ({
       ...o,
-      orderId: formatOrderIdSuffix(o._id),
+      orderId: o.orderNumber || formatOrderIdSuffix(o._id),
     }));
 
     res.json({

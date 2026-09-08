@@ -1202,7 +1202,7 @@ router.get(
     try {
       const orders = await Order.find(
         { "items.isPreorder": true },
-        "items billingDetails userEmail status paymentStatus createdAt",
+        "orderNumber items billingDetails userEmail status paymentStatus createdAt",
       )
         .sort({ createdAt: -1 })
         .lean();
@@ -1213,6 +1213,7 @@ router.get(
           if (!item.isPreorder) return;
           rows.push({
             orderId: o._id,
+            orderNumber: o.orderNumber || null,
             itemIndex: idx,
             productId: item.productId,
             productTitle: item.title,
@@ -1304,7 +1305,10 @@ router.get("/my", async (req, res) => {
     res.json({
       orders: orders.map((o) => {
         const obj = o.toObject ? o.toObject() : o;
-        return { ...obj, orderId: formatOrderIdSuffix(o._id) };
+        return {
+          ...obj,
+          orderId: o.orderNumber || formatOrderIdSuffix(o._id),
+        };
       }),
     });
   } catch (err) {
@@ -1570,6 +1574,7 @@ router.get("/:id", async (req, res) => {
     // without exposing name / phone / address to strangers.
     const publicOrder = {
       _id: order._id,
+      orderNumber: order.orderNumber || null,
       status: order.status,
       paymentStatus: order.paymentStatus,
       paymentMethod: order.paymentMethod,

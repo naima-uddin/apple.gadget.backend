@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { nextOrderNumber } from "../lib/orderNumber.js";
 
 const OrderItemSchema = new mongoose.Schema(
   {
@@ -169,6 +170,11 @@ const ShipmentSchema = new mongoose.Schema(
 );
 
 const OrderSchema = new mongoose.Schema({
+  // Human-friendly sequential order id (e.g. "apl1001"). Shown everywhere in
+  // the storefront/dashboard and sent to couriers as the merchant invoice id.
+  // Assigned automatically on creation (see pre-save hook); unique + sparse so
+  // any pre-migration order without one doesn't collide on null.
+  orderNumber: { type: String, unique: true, sparse: true },
   userId: { type: String, default: null }, // MongoDB _id as string (may be null for guests)
   userEmail: { type: String, default: null },
   items: { type: [OrderItemSchema], required: true },
@@ -257,6 +263,9 @@ const OrderSchema = new mongoose.Schema({
 
 OrderSchema.pre("save", async function () {
   this.updatedAt = new Date();
+  if (this.isNew && !this.orderNumber) {
+    this.orderNumber = await nextOrderNumber();
+  }
 });
 
 // Compound indexes for dashboard queries and fraud-prevention lookups

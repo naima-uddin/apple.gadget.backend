@@ -260,6 +260,31 @@ const SettingsSchema = new mongoose.Schema({
       },
     ],
   },
+  // Fully admin-editable footer brand block + bottom bar. Controls the
+  // centered hero (headline, tagline, CTA buttons), the section headings,
+  // the copyright line and the bottom legal links. Empty fields fall back to
+  // the storefront's built-in translated defaults so older sites keep working.
+  footerBrand: {
+    headline: { type: String, default: "" },
+    tagline: { type: String, default: "" },
+    primaryCtaLabel: { type: String, default: "" },
+    primaryCtaLink: { type: String, default: "/products" },
+    accountCtaLabel: { type: String, default: "" },
+    accountCtaLink: { type: String, default: "/user/profile" },
+    loginCtaLabel: { type: String, default: "" },
+    contactTitle: { type: String, default: "" },
+    quickLinksTitle: { type: String, default: "" },
+    followUsLabel: { type: String, default: "" },
+    // {year} is replaced with the current year at render time
+    copyright: { type: String, default: "" },
+    bottomLinks: [
+      {
+        label: { type: String, default: "" },
+        href: { type: String, default: "" },
+        _id: false,
+      },
+    ],
+  },
   // Fully admin-editable footer navigation columns (title + links).
   // When non-empty, these supersede the legacy footerLinks columns in the UI.
   footerColumns: [

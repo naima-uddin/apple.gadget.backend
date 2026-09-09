@@ -463,6 +463,10 @@ router.get("/barcode/:code", async (req, res) => {
 
 router.get("/:id", async (req, res) => {
   try {
+    // Match the listing endpoints: never let a CDN/browser hold a stale copy.
+    // Redis still absorbs the read load, but admin edits must surface on the
+    // storefront immediately (the product cache key is cleared on update).
+    res.set("Cache-Control", "no-store");
     const prodCacheKey = `product:${req.params.id}`;
     if (redisClient?.isReady) {
       try {

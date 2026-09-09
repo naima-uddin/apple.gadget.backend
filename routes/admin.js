@@ -5153,22 +5153,33 @@ router.post(
         }
       }
 
-      // Clean up the source abandoned cart / checkout so it drops off those lists
-      if (sourceCartUserId) {
-        User.findByIdAndUpdate(sourceCartUserId, { savedCart: null }).catch(
-          () => {},
-        );
+      // Clean up the source abandoned cart / checkout so it drops off those
+      // lists. These are awaited (not fire-and-forget) so the records are
+      // committed before we respond — otherwise the row can reappear in the
+      // abandoned tab on the next refresh. Once the order exists, both the
+      // saved cart and any incomplete checkout for this customer are stale, so
+      // we clear both regardless of which tab the order was created from.
+      const cartUserIds = [sourceCartUserId, linkedUserId].filter(Boolean);
+      if (cartUserIds.length) {
+        try {
+          await User.updateMany(
+            { _id: { $in: cartUserIds } },
+            { savedCart: null },
+          );
+        } catch {}
       }
-      if (sourceCheckoutId) {
-        CheckoutSession.findByIdAndUpdate(sourceCheckoutId, {
-          status: "completed",
-          completedAt: new Date(),
-        }).catch(() => {});
-      } else if (linkedUserId) {
-        CheckoutSession.updateMany(
-          { userId: linkedUserId, status: "incomplete" },
-          { status: "completed", completedAt: new Date() },
-        ).catch(() => {});
+
+      const checkoutFilter = { $or: [] };
+      if (sourceCheckoutId) checkoutFilter.$or.push({ _id: sourceCheckoutId });
+      if (linkedUserId)
+        checkoutFilter.$or.push({ userId: linkedUserId, status: "incomplete" });
+      if (checkoutFilter.$or.length) {
+        try {
+          await CheckoutSession.updateMany(checkoutFilter, {
+            status: "completed",
+            completedAt: new Date(),
+          });
+        } catch {}
       }
 
       const customerUserId = await resolveCustomerUserId(order);

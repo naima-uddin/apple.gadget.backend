@@ -230,17 +230,21 @@ router.post("/unsubscribe", requireUser, async (req, res) => {
 router.put("/cart", requireUser, async (req, res) => {
   try {
     const { items } = req.body;
-    const cartItems = (items || []).map((item) => ({
+    const cartItems = (items || []).map((item) => {
+      const img = item.product?.images?.[0];
+      const imageUrl = (typeof img === "string" ? img : img?.url) || item.image;
+      return {
       productId: String(
         item.product?._id || item.product?.id || item.productId || "",
       ),
       title: String(item.product?.title || item.title || ""),
-      image: String(item.product?.images?.[0] || item.image || ""),
+      image: String(imageUrl || ""),
       price: Number(item.selectedVariant?.price || item.product?.price || 0),
       quantity: Number(item.quantity || 1),
       color: item.selectedColor || null,
       size: item.selectedSize || null,
-    }));
+      };
+    });
     req.user.savedCart = { items: cartItems, updatedAt: new Date() };
     await req.user.save();
     res.json({ ok: true });

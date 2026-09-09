@@ -6719,7 +6719,7 @@ router.get(
       const skip = (pg - 1) * lim;
       const [users, total] = await Promise.all([
         User.find(filter)
-          .select("name email mobile savedCart")
+          .select("name email mobile savedCart addresses")
           .sort({ "savedCart.updatedAt": -1 })
           .skip(skip)
           .limit(lim)

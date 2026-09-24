@@ -39,6 +39,7 @@ import {
 } from "../lib/orderLookup.js";
 import {
   requirePermission,
+  requireAnyPermission,
   sanitizePermissions,
   hasPermission,
 } from "../lib/permissions.js";
@@ -501,24 +502,24 @@ router.put("/settings", requireAdmin, async (req, res) => {
 // Storefront Design section can save it, while other Setting fields stay
 // admin-only. Admins pass every check (hasPermission → true for role "admin").
 const STOREFRONT_SETTING_PERMISSIONS = {
-  promoBanner: "content", // Promo banner (content.banners)
-  typographicHero: "content", // Typographic hero (content.banners)
-  featuredShowcase: "content", // Featured showcase (content.banners)
-  categoryShowcase: "content", // Category showcase (content.promo)
-  whyChooseUs: "content", // Why choose us (content.promo)
-  dealOfDayProductId: "content", // Deal of the Day (content.promo)
-  offersTitle: "catalog", // Offers section title, edited on Discounts page (products.discounts)
+  promoBanner: ["content"], // Promo banner
+  typographicHero: ["content"], // Typographic hero
+  featuredShowcase: ["content"], // Featured showcase
+  categoryShowcase: ["content"], // Category showcase
+  whyChooseUs: ["content"], // Why choose us
+  dealOfDayProductId: ["content"], // Deal of the Day
+  offersTitle: ["content", "catalog"], // Offers section title, edited on Discounts page (Storefront or products/catalog)
 };
 
 router.put("/settings/storefront", requireAdmin, async (req, res) => {
   try {
     const payload = req.body || {};
     const $set = {};
-    for (const [field, permKey] of Object.entries(
+    for (const [field, permKeys] of Object.entries(
       STOREFRONT_SETTING_PERMISSIONS,
     )) {
       if (!Object.prototype.hasOwnProperty.call(payload, field)) continue;
-      if (!hasPermission(req.admin, permKey))
+      if (!permKeys.some((k) => hasPermission(req.admin, k)))
         return res
           .status(403)
           .json({ error: "You do not have permission to edit this section" });
@@ -4343,7 +4344,7 @@ router.delete(
 router.get(
   "/discounts",
   requireAdmin,
-  requirePermission("catalog"),
+  requireAnyPermission(["content", "catalog"]),
   async (req, res) => {
     try {
       const Discount = (await import("../models/Discount.js")).default;
@@ -4358,7 +4359,7 @@ router.get(
 router.post(
   "/discounts",
   requireAdmin,
-  requirePermission("catalog"),
+  requireAnyPermission(["content", "catalog"]),
   async (req, res) => {
     try {
       const Discount = (await import("../models/Discount.js")).default;
@@ -4377,7 +4378,7 @@ router.post(
 router.put(
   "/discounts-reorder",
   requireAdmin,
-  requirePermission("catalog"),
+  requireAnyPermission(["content", "catalog"]),
   async (req, res) => {
     try {
       const Discount = (await import("../models/Discount.js")).default;
@@ -4397,7 +4398,7 @@ router.put(
 router.put(
   "/discounts/:id",
   requireAdmin,
-  requirePermission("catalog"),
+  requireAnyPermission(["content", "catalog"]),
   async (req, res) => {
     try {
       const Discount = (await import("../models/Discount.js")).default;
@@ -4416,7 +4417,7 @@ router.put(
 router.delete(
   "/discounts/:id",
   requireAdmin,
-  requirePermission("catalog"),
+  requireAnyPermission(["content", "catalog"]),
   async (req, res) => {
     try {
       const Discount = (await import("../models/Discount.js")).default;

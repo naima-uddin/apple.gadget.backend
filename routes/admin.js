@@ -493,6 +493,57 @@ router.put("/settings", requireAdmin, async (req, res) => {
   }
 });
 
+// Storefront Design settings — the subset of Setting fields edited from the
+// dashboard's "Storefront Design" section. These live on the single Setting
+// document, so they can't go through the generic /settings PUT (which is
+// admin-only to protect store info, pixels, etc.). Each field here is gated by
+// the SAME permission as the page that edits it, so a moderator granted that
+// Storefront Design section can save it, while other Setting fields stay
+// admin-only. Admins pass every check (hasPermission → true for role "admin").
+const STOREFRONT_SETTING_PERMISSIONS = {
+  promoBanner: "content", // Promo banner (content.banners)
+  typographicHero: "content", // Typographic hero (content.banners)
+  featuredShowcase: "content", // Featured showcase (content.banners)
+  categoryShowcase: "content", // Category showcase (content.promo)
+  whyChooseUs: "content", // Why choose us (content.promo)
+  dealOfDayProductId: "content", // Deal of the Day (content.promo)
+  offersTitle: "catalog", // Offers section title, edited on Discounts page (products.discounts)
+};
+
+router.put("/settings/storefront", requireAdmin, async (req, res) => {
+  try {
+    const payload = req.body || {};
+    const $set = {};
+    for (const [field, permKey] of Object.entries(
+      STOREFRONT_SETTING_PERMISSIONS,
+    )) {
+      if (!Object.prototype.hasOwnProperty.call(payload, field)) continue;
+      if (!hasPermission(req.admin, permKey))
+        return res
+          .status(403)
+          .json({ error: "You do not have permission to edit this section" });
+      // dealOfDayProductId is an id or null (null clears the Deal of the Day);
+      // accept it whenever the key is present. Other fields are objects.
+      if (field === "dealOfDayProductId") {
+        $set[field] = payload[field] || null;
+      } else if (payload[field] && typeof payload[field] === "object") {
+        $set[field] = payload[field];
+      }
+    }
+    if (Object.keys($set).length === 0)
+      return res.status(400).json({ error: "No valid fields provided" });
+    const Setting = (await import("../models/Setting.js")).default;
+    const settings = await Setting.findOneAndUpdate(
+      {},
+      { $set },
+      { upsert: true, new: true },
+    );
+    res.json({ ok: true, settings });
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 // Delivery charge config (inside/outside Dhaka defaults + per-zone/area
 // overrides) — any authenticated moderator/admin with catalog access can
 // manage, same access model as the policy content route below.

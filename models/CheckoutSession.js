@@ -17,6 +17,8 @@ const CheckoutSessionSchema = new mongoose.Schema({
     image: { type: String, default: null },
     price: { type: Number, default: 0 },
     quantity: { type: Number, default: 1 },
+    color: { type: String, default: null },
+    size: { type: String, default: null },
   }],
   total: { type: Number, default: 0 },
   status: { type: String, enum: ['incomplete', 'completed'], default: 'incomplete' },

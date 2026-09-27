@@ -197,6 +197,63 @@ const calculateCouponDiscount = (coupon, subtotal) => {
   };
 };
 
+// ── variant attribute matching ────────────────────────────────────────────────
+const VARIANT_COLOR_RE = /^colou?rs?$/i;
+const VARIANT_SIZE_RE = /^sizes?$/i;
+
+// Normalised attribute map for a DB variant: explicit `attributes` plus
+// Color/Size synthesised from the denormalised color.name / size fields, so a
+// variant can be matched by any combination of Color, Size and generic groups.
+const backendVariantAttrMap = (v) => {
+  const map = {};
+  Object.entries(v.attributes || {}).forEach(([k, val]) => {
+    const s = val == null ? "" : String(val).trim();
+    if (s) map[k] = s;
+  });
+  const colorName = v.color?.name?.trim();
+  if (colorName && !Object.keys(map).some((k) => VARIANT_COLOR_RE.test(k))) {
+    map.Color = colorName;
+  }
+  const sizeVal = v.size?.trim();
+  if (sizeVal && !Object.keys(map).some((k) => VARIANT_SIZE_RE.test(k))) {
+    map.Size = sizeVal;
+  }
+  return map;
+};
+
+// Find the single variant matching ALL provided attributes (case-insensitive).
+// `attributes` is a plain map { groupName: value } — blanks are ignored.
+const matchVariantByAttributes = (prod, attributes) => {
+  const entries = Object.entries(attributes || {}).filter(
+    ([, v]) => v != null && String(v).trim(),
+  );
+  if (!entries.length || !prod.variants?.length) return null;
+  return (
+    prod.variants.find((v) => {
+      const map = backendVariantAttrMap(v);
+      const keys = Object.keys(map);
+      return entries.every(([g, val]) => {
+        const k = keys.find((x) => x.toLowerCase() === g.toLowerCase());
+        return k && map[k].toLowerCase() === String(val).trim().toLowerCase();
+      });
+    }) || null
+  );
+};
+
+// Normalise a client-supplied attributes object/Map to a plain {group: value}
+// map with blanks stripped. Accepts a Map (Mongoose) or a plain object.
+const cleanAttributes = (raw) => {
+  const entries =
+    raw instanceof Map
+      ? [...raw.entries()]
+      : raw && typeof raw === "object"
+        ? Object.entries(raw)
+        : [];
+  return Object.fromEntries(
+    entries.filter(([, v]) => v != null && String(v).trim()),
+  );
+};
+
 // ── resolveAndQuote ───────────────────────────────────────────────────────────
 // Shared helper used by both /quote (read-only preview) and POST / (order save).
 // Fetches real prices from the DB, validates coupon(s), and returns the full
@@ -227,8 +284,34 @@ const resolveAndQuote = async (
     }
     const qty = Math.max(1, parseInt(ci.quantity) || 1);
 
+    // Combined generic-variant selection sent alongside color/size, e.g.
+    // { Type: "8 Pin" }. Optional — the customer may leave it unset.
+    const extraAttrs = cleanAttributes(ci.attributes);
+    const hasExtraAttrs = Object.keys(extraAttrs).length > 0;
+
     let unitPrice = prod.price ?? 0;
-    if (prod.variants?.length && (ci.color || ci.size)) {
+    if (prod.variants?.length && hasExtraAttrs) {
+      // Match the exact combo across Color + Size + every generic group so
+      // e.g. White + 8-Pin resolves to its own variant/price. Fall back to
+      // extras-only, then color/size-only (color is cosmetic, so the generic
+      // group price wins when there's no exact combined variant).
+      const fullAttrs = {
+        ...(ci.color ? { Color: ci.color } : {}),
+        ...(ci.size ? { Size: ci.size } : {}),
+        ...extraAttrs,
+      };
+      let variant = matchVariantByAttributes(prod, fullAttrs);
+      if (!variant) variant = matchVariantByAttributes(prod, extraAttrs);
+      if (!variant && (ci.color || ci.size)) {
+        variant = matchVariantByAttributes(prod, {
+          ...(ci.color ? { Color: ci.color } : {}),
+          ...(ci.size ? { Size: ci.size } : {}),
+        });
+      }
+      if (variant && variant.price != null && variant.price > 0) {
+        unitPrice = variant.price;
+      }
+    } else if (prod.variants?.length && (ci.color || ci.size)) {
       // Try new structure first (v.color.name, v.size)
       let variant = prod.variants.find((v) => {
         const variantColor = v.color?.name?.toLowerCase()?.trim();
@@ -282,6 +365,9 @@ const resolveAndQuote = async (
       image: prod.images?.[0]?.url || null,
       color: ci.color || null,
       size: ci.size || null,
+      attrGroup: ci.attrGroup || null,
+      attrValue: ci.attrValue || null,
+      attributes: hasExtraAttrs ? extraAttrs : undefined,
       rewardPoints: Math.max(0, Number(prod.rewardPoints) || 0),
       isPreorder: prod.availability === "pre_order",
     });
@@ -542,6 +628,29 @@ const resolveVariantPrice = (product, color, size) => {
     : (product.price ?? null);
 };
 
+// Price for a full color + size + combined generic-attributes selection, with
+// the same fallbacks as resolveAndQuote (full combo → extras-only →
+// color/size-only). Used when re-pricing edited/added order items.
+const priceForSelection = (product, color, size, attributes) => {
+  if (!product) return null;
+  const extra = cleanAttributes(attributes);
+  if (product.variants?.length && Object.keys(extra).length) {
+    const cs = {
+      ...(color ? { Color: color } : {}),
+      ...(size ? { Size: size } : {}),
+    };
+    let variant = matchVariantByAttributes(product, { ...cs, ...extra });
+    if (!variant) variant = matchVariantByAttributes(product, extra);
+    if (!variant && (color || size)) {
+      variant = matchVariantByAttributes(product, cs);
+    }
+    if (variant && variant.price != null && variant.price > 0) {
+      return variant.price;
+    }
+  }
+  return resolveVariantPrice(product, color, size);
+};
+
 // ── POST /api/orders/quote ───────────────────────────────────────────────────
 // Read-only price preview. No DB writes. The frontend calls this whenever cart
 // contents change or a coupon is applied, and displays ONLY these server values.
@@ -796,12 +905,6 @@ router.post("/", orderLimiter, async (req, res) => {
         "",
       deviceId: deviceId || "",
       userAgent: req.headers["user-agent"] || "",
-      // COD / manual mobile-banking orders auto-confirm 1 hour after placement
-      confirmAfter: ["cash-on-delivery", "bkash", "nagad", "rocket"].includes(
-        paymentMethod,
-      )
-        ? new Date(Date.now() + 1 * 60 * 60 * 1000)
-        : null,
     });
 
     await order.save();
@@ -1262,23 +1365,6 @@ router.get("/my", async (req, res) => {
       createdAt: -1,
     });
 
-    // Lazy auto-confirm: promote pending COD orders past their confirmAfter deadline
-    const now = new Date();
-    const toConfirm = orders.filter(
-      (o) =>
-        o.status === "pending" &&
-        o.paymentMethod === "cash-on-delivery" &&
-        o.confirmAfter &&
-        o.confirmAfter <= now,
-    );
-    if (toConfirm.length) {
-      await Order.updateMany(
-        { _id: { $in: toConfirm.map((o) => o._id) } },
-        { status: "confirmed", updatedAt: now },
-      );
-      toConfirm.forEach((o) => (o.status = "confirmed"));
-    }
-
     // Lazy sync courier tracking from live URLs (max 5 per request)
     const toSync = orders
       .filter(
@@ -1388,15 +1474,12 @@ router.post("/webhooks/steadfast", async (req, res) => {
     order.shipment.courierStatus = String(message);
     order.shipment.lastSyncAt = new Date();
 
-    const statusType = String(payload.status_type || "").toLowerCase();
-    if (statusType.includes("deliver")) {
-      order.status = "delivered";
-      order.shipment.deliveredAt = event.at;
-    } else if (statusType.includes("cancel")) {
-      order.status = "cancelled";
-    } else if (!["delivered", "cancelled", "failed"].includes(order.status)) {
-      order.status = "shipped";
-    }
+    // DISPLAY-ONLY: the webhook records the courier's raw status + tracking event
+    // history, but must never change the business order status. Substring matching
+    // on status_type (e.g. .includes("deliver")) wrongly matched phrases like
+    // "At Delivery Hub" / "Out for Delivery" and flipped orders to "delivered".
+    // Order status now changes only through a manual admin/moderator action
+    // (PUT /api/admin/orders/:id/status), which records changedBy in the history.
 
     order.updatedAt = new Date();
     await order.save();
@@ -1456,19 +1539,6 @@ router.post("/webhooks/pathao", async (req, res) => {
   }
 });
 
-async function lazyConfirmCodOrder(order) {
-  if (
-    order.status === "pending" &&
-    order.paymentMethod === "cash-on-delivery" &&
-    order.confirmAfter &&
-    order.confirmAfter <= new Date()
-  ) {
-    order.status = "confirmed";
-    order.updatedAt = new Date();
-    await order.save();
-  }
-}
-
 // ── GET /api/orders/track — public lookup by order ID or phone number
 router.get("/track", async (req, res) => {
   try {
@@ -1517,8 +1587,6 @@ router.get("/track", async (req, res) => {
       });
     }
 
-    await lazyConfirmCodOrder(order);
-
     try {
       const syncResult = await syncOrderShipment(order, { force: false });
       if (syncResult.ok && syncResult.order) {
@@ -1543,18 +1611,6 @@ router.get("/:id", async (req, res) => {
   try {
     const order = await Order.findById(req.params.id);
     if (!order) return res.status(404).json({ error: "Order not found" });
-
-    // Lazy auto-confirm
-    if (
-      order.status === "pending" &&
-      order.paymentMethod === "cash-on-delivery" &&
-      order.confirmAfter &&
-      order.confirmAfter <= new Date()
-    ) {
-      order.status = "confirmed";
-      order.updatedAt = new Date();
-      await order.save();
-    }
 
     const identity = await getRequesterIdentity(req);
     const isAdmin = identity?.type === "admin";
@@ -1619,11 +1675,6 @@ router.patch("/:id/cancel", async (req, res) => {
         error: `Order is already ${order.status} and cannot be cancelled.`,
       });
     }
-    if (order.confirmAfter && new Date() > order.confirmAfter) {
-      return res
-        .status(400)
-        .json({ error: "The 1-hour cancellation window has passed." });
-    }
 
     const reason = (req.body?.reason || "").trim();
     if (reason.length < 5) {
@@ -1672,11 +1723,6 @@ router.patch("/:id/edit", async (req, res) => {
         error: `Order is already ${order.status} and cannot be edited.`,
       });
     }
-    if (order.confirmAfter && new Date() > order.confirmAfter) {
-      return res
-        .status(400)
-        .json({ error: "The 1-hour edit window has passed." });
-    }
 
     const { note, address, phone, billingDetails, items, addItems } =
       req.body || {};
@@ -1691,11 +1737,36 @@ router.patch("/:id/edit", async (req, res) => {
       ...billingPatch,
     };
 
+    const prevCity = order.billingDetails.city;
+    const prevZone = order.billingDetails.zone;
+    const prevArea = order.billingDetails.area;
+
     Object.entries(billingUpdates).forEach(([key, value]) => {
       if (typeof value !== "undefined") {
         order.billingDetails[key] = value;
       }
     });
+
+    // If the delivery address (city/zone/area) changed, recompute the shipping
+    // charge from the new location. Only recompute for orders that were already
+    // paying delivery (shipping > 0) so a free-shipping order (product/coupon)
+    // keeps its 0 charge.
+    let shippingChanged = false;
+    const addressChanged =
+      order.billingDetails.city !== prevCity ||
+      order.billingDetails.zone !== prevZone ||
+      order.billingDetails.area !== prevArea;
+    if (addressChanged && (order.shipping || 0) > 0) {
+      const newShipping = await calcBaseShipping(
+        order.billingDetails.city,
+        order.billingDetails.zone,
+        order.billingDetails.area,
+      );
+      if (newShipping !== order.shipping) {
+        order.shipping = newShipping;
+        shippingChanged = true;
+      }
+    }
 
     // Update item quantities if provided
     if (Array.isArray(items) && items.length > 0) {
@@ -1722,6 +1793,10 @@ router.patch("/:id/edit", async (req, res) => {
           typeof itemUpdate.size !== "undefined"
             ? itemUpdate.size
             : currentItem.size;
+        const nextAttrs =
+          typeof itemUpdate.attributes !== "undefined"
+            ? cleanAttributes(itemUpdate.attributes)
+            : cleanAttributes(currentItem.attributes);
         const nextQuantity = Number(itemUpdate.quantity);
 
         if (Number.isFinite(nextQuantity) && nextQuantity >= 1) {
@@ -1734,14 +1809,20 @@ router.patch("/:id/edit", async (req, res) => {
         if (typeof itemUpdate.size !== "undefined") {
           currentItem.size = itemUpdate.size || null;
         }
+        if (typeof itemUpdate.attributes !== "undefined") {
+          currentItem.attributes = Object.keys(nextAttrs).length
+            ? nextAttrs
+            : undefined;
+        }
 
         if (productId) {
           const product = await Product.findById(productId).lean();
           if (product) {
-            const resolvedPrice = resolveVariantPrice(
+            const resolvedPrice = priceForSelection(
               product,
               nextColor,
               nextSize,
+              nextAttrs,
             );
             if (resolvedPrice != null) {
               currentItem.price = resolvedPrice;
@@ -1758,8 +1839,11 @@ router.patch("/:id/edit", async (req, res) => {
         const prod = await Product.findById(ni.productId).lean();
         if (!prod) continue;
         const qty = Math.max(1, parseInt(ni.quantity) || 1);
+        const niAttrs = cleanAttributes(ni.attributes);
         const price =
-          resolveVariantPrice(prod, ni.color, ni.size) ?? prod.price ?? 0;
+          priceForSelection(prod, ni.color, ni.size, niAttrs) ??
+          prod.price ??
+          0;
         order.items.push({
           productId: prod._id,
           title: prod.title,
@@ -1768,16 +1852,19 @@ router.patch("/:id/edit", async (req, res) => {
           image: prod.images?.[0]?.url || null,
           color: ni.color || null,
           size: ni.size || null,
+          attrGroup: ni.attrGroup || null,
+          attrValue: ni.attrValue || null,
+          attributes: Object.keys(niAttrs).length ? niAttrs : undefined,
           rewardPoints: Math.max(0, Number(prod.rewardPoints) || 0),
         });
       }
     }
 
-    // Recalculate totals whenever items changed
-    if (
+    // Recalculate totals whenever items changed or the shipping charge changed
+    const itemsChanged =
       (Array.isArray(items) && items.length > 0) ||
-      (Array.isArray(addItems) && addItems.length > 0)
-    ) {
+      (Array.isArray(addItems) && addItems.length > 0);
+    if (itemsChanged || shippingChanged) {
       const newSubtotal = order.items.reduce(
         (sum, it) => sum + (it.price || 0) * it.quantity,
         0,
@@ -1823,7 +1910,6 @@ router.patch("/:id/switch-to-cod", async (req, res) => {
     order.paymentMethod = "cash-on-delivery";
     order.paymentStatus = "cod";
     order.paymentNote = "Switched to COD by customer on payment page.";
-    order.confirmAfter = new Date(Date.now() + 1 * 60 * 60 * 1000);
     await order.save();
     res.json({ ok: true });
   } catch (err) {

@@ -17,6 +17,14 @@ router.post("/share", async (req, res) => {
         quantity: Math.max(1, parseInt(i.quantity) || 1),
         color: i.color || null,
         size: i.size || null,
+        attrGroup: i.attrGroup || null,
+        attrValue: i.attrValue || null,
+        attributes:
+          i.attributes &&
+          typeof i.attributes === "object" &&
+          Object.keys(i.attributes).length
+            ? i.attributes
+            : undefined,
       }))
       .filter((i) => i.productId);
 
@@ -69,6 +77,12 @@ router.get("/share/:token", async (req, res) => {
           quantity: i.quantity,
           color: i.color,
           size: i.size,
+          attrGroup: i.attrGroup ?? null,
+          attrValue: i.attrValue ?? null,
+          attributes:
+            i.attributes instanceof Map
+              ? Object.fromEntries(i.attributes)
+              : i.attributes || null,
         };
       })
       .filter(Boolean);

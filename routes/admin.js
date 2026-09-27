@@ -5171,10 +5171,6 @@ router.post(
         rewardPointsEarned: quote.rewardPointsEarned || 0,
         status: initialStatus,
         paymentStatus: resolvedPaymentStatus,
-        // COD / manual mobile-banking orders auto-confirm 1 hour after placement
-        confirmAfter: isCodLike
-          ? new Date(Date.now() + 60 * 60 * 1000)
-          : null,
       });
 
       appendStatusHistory(order, {
@@ -5693,6 +5689,14 @@ router.put(
           image: item.image || null,
           color: item.color || null,
           size: item.size || null,
+          attrGroup: item.attrGroup || null,
+          attrValue: item.attrValue || null,
+          attributes:
+            item.attributes &&
+            typeof item.attributes === "object" &&
+            Object.keys(item.attributes).length
+              ? item.attributes
+              : undefined,
           rewardPoints: Number(item.rewardPoints) || 0,
         }));
         order.subtotal = order.items.reduce(
@@ -5822,9 +5826,8 @@ router.get(
   },
 );
 
-const PICKED_STATUSES = ["accepted", "picked", "approved"];
-
-// PUT /api/admin/orders/:id/pick — pick toggle assigns picker + status accepted
+// PUT /api/admin/orders/:id/pick — pick toggle only assigns/clears the picker
+// (order status is never changed automatically; that stays a manual action)
 router.put(
   "/orders/:id/pick",
   requireAdmin,
@@ -5837,19 +5840,22 @@ router.put(
 
       const adminName = req.admin?.name || "admin";
       if (pick) {
-        if (order.pickedBy?.adminId && PICKED_STATUSES.includes(order.status)) {
+        // Picking only assigns the picker — it must NOT change the order status.
+        // The status stays whatever it is until an admin/moderator changes it
+        // manually (PUT /api/admin/orders/:id/status), which records changedBy.
+        if (order.pickedBy?.adminId) {
           if (order.pickedBy.adminId.toString() !== req.admin._id.toString()) {
             return res
               .status(400)
               .json({ error: `Already picked by ${order.pickedBy.name}` });
           }
+          // Same picker re-picking — no-op.
         } else {
           order.pickedBy = {
             adminId: req.admin._id,
             name: adminName,
             pickedAt: new Date(),
           };
-          applyOrderStatusChange(order, "accepted", { changedBy: adminName });
         }
       } else {
         if (
@@ -5861,13 +5867,8 @@ router.put(
             .status(403)
             .json({ error: "Only the picker or an admin can unpick" });
         }
+        // Unpicking only clears the picker — it must NOT change the order status.
         order.pickedBy = null;
-        if (PICKED_STATUSES.includes(order.status)) {
-          applyOrderStatusChange(order, "pending", {
-            reason: "Unpicked",
-            changedBy: adminName,
-          });
-        }
       }
 
       order.updatedAt = new Date();

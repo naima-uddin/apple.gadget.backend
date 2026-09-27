@@ -29,6 +29,14 @@ router.post('/', async (req, res) => {
         quantity: Number(i.quantity || 1),
         color: i.color || null,
         size: i.size || null,
+        attrGroup: i.attrGroup || null,
+        attrValue: i.attrValue || null,
+        attributes:
+          i.attributes &&
+          typeof i.attributes === "object" &&
+          Object.keys(i.attributes).length
+            ? i.attributes
+            : undefined,
       })),
       total: Number(total || 0),
     });

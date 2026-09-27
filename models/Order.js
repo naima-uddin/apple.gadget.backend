@@ -10,6 +10,11 @@ const OrderItemSchema = new mongoose.Schema(
     image: String,
     color: { type: String, default: null },
     size: { type: String, default: null },
+    // Standalone single generic-group variant (legacy: e.g. Type=Charging).
+    attrGroup: { type: String, default: null },
+    attrValue: { type: String, default: null },
+    // Combinable multi-dimensional selection, e.g. { Color: "White", Type: "8 Pin" }.
+    attributes: { type: Map, of: String, default: undefined },
     rewardPoints: { type: Number, default: 0 },
     isPreorder: { type: Boolean, default: false },
   },

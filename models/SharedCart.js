@@ -6,6 +6,9 @@ const SharedCartItemSchema = new mongoose.Schema(
     quantity: { type: Number, default: 1 },
     color: { type: String, default: null },
     size: { type: String, default: null },
+    attrGroup: { type: String, default: null },
+    attrValue: { type: String, default: null },
+    attributes: { type: Map, of: String, default: undefined },
   },
   { _id: false },
 );

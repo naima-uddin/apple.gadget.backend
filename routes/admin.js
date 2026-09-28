@@ -6858,6 +6858,23 @@ router.get(
   },
 );
 
+// POST /api/admin/abandoned-checkouts/bulk-delete — remove many session records at once
+router.post(
+  "/abandoned-checkouts/bulk-delete",
+  requireAdmin,
+  requirePermission("orders"),
+  async (req, res) => {
+    try {
+      const ids = Array.isArray(req.body?.ids) ? req.body.ids : [];
+      if (!ids.length) return res.status(400).json({ error: "No ids provided" });
+      const result = await CheckoutSession.deleteMany({ _id: { $in: ids } });
+      res.json({ ok: true, deleted: result.deletedCount || 0 });
+    } catch (err) {
+      res.status(500).json({ error: "Server error" });
+    }
+  },
+);
+
 // DELETE /api/admin/abandoned-checkouts/:id — remove a checkout session record
 router.delete(
   "/abandoned-checkouts/:id",

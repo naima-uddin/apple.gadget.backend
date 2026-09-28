@@ -464,6 +464,32 @@ router.get("/barcode/:code", async (req, res) => {
   }
 });
 
+// Batch fetch products by IDs — used by cart hydration to refresh prices/stock
+// and by the order editors to load variants for the per-line variant dropdowns.
+// GET /api/products/batch?ids=id1,id2,id3 (max 50)
+// NOTE: must be declared before "/:id" — Express matches top-down, and "/:id"
+// would otherwise swallow "/batch" as a product id (CastError → 500).
+router.get("/batch", async (req, res) => {
+  try {
+    const raw = (req.query.ids || "")
+      .split(",")
+      .map((s) => s.trim())
+      .filter(Boolean);
+    if (raw.length === 0) return res.json({ products: [] });
+    const ids = raw.slice(0, 50);
+    // Only fields needed by CartContext: prices, stock, images, variants for
+    // variant-price lookup.  Strip reviews/faqs/ingredients to keep payload small.
+    const products = await Product.find({ _id: { $in: ids }, deletedAt: null })
+      .select(
+        "_id title price compareAtPrice images availability inventory slug variants freeShipping",
+      )
+      .lean();
+    res.json({ products: products.map(stripBuyingPrice) });
+  } catch (err) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 router.get("/:id", async (req, res) => {
   try {
     // Match the listing endpoints: never let a CDN/browser hold a stale copy.
@@ -1059,28 +1085,5 @@ router.post(
     }
   },
 );
-
-// Batch fetch products by IDs — used by cart hydration to refresh prices/stock
-// GET /api/products/batch?ids=id1,id2,id3 (max 50)
-router.get("/batch", async (req, res) => {
-  try {
-    const raw = (req.query.ids || "")
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-    if (raw.length === 0) return res.json({ products: [] });
-    const ids = raw.slice(0, 50);
-    // Only fields needed by CartContext: prices, stock, images, variants for
-    // variant-price lookup.  Strip reviews/faqs/ingredients to keep payload small.
-    const products = await Product.find({ _id: { $in: ids }, deletedAt: null })
-      .select(
-        "_id title price compareAtPrice images availability inventory slug variants freeShipping",
-      )
-      .lean();
-    res.json({ products: products.map(stripBuyingPrice) });
-  } catch (err) {
-    res.status(500).json({ error: "Server error" });
-  }
-});
 
 export default router;

@@ -21,7 +21,7 @@ const CheckoutSessionSchema = new mongoose.Schema({
     size: { type: String, default: null },
     attrGroup: { type: String, default: null },
     attrValue: { type: String, default: null },
-    attributes: { type: Map, of: String, default: undefined },
+    attributes: { type: Object, default: undefined },
   }],
   total: { type: Number, default: 0 },
   status: { type: String, enum: ['incomplete', 'completed'], default: 'incomplete' },

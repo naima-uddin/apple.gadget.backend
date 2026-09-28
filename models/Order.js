@@ -14,7 +14,9 @@ const OrderItemSchema = new mongoose.Schema(
     attrGroup: { type: String, default: null },
     attrValue: { type: String, default: null },
     // Combinable multi-dimensional selection, e.g. { Color: "White", Type: "8 Pin" }.
-    attributes: { type: Map, of: String, default: undefined },
+    // Stored as a plain object (not a Map) so it serialises cleanly in every
+    // res.json()/toObject() path — Maps flatten to {} in some of them.
+    attributes: { type: Object, default: undefined },
     rewardPoints: { type: Number, default: 0 },
     isPreorder: { type: Boolean, default: false },
   },

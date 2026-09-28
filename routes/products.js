@@ -119,22 +119,29 @@ router.get("/", async (req, res) => {
     };
     if (flag && FLAG_MAP[flag]) filter[FLAG_MAP[flag]] = true;
     if (q) {
+      // Partial, case-insensitive substring matching so half-typed queries
+      // still hit ("dj" or "d" → "dj01", "iph" → "iPhone"). $text only matches
+      // whole words/stems, so it would miss these — regex substring is used
+      // for both autocomplete (suggest) and full search.
+      const clean = String(q).trim().slice(0, 200);
+      const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
       if (suggest) {
-        // Autocomplete mode: partial, case-insensitive match so half-typed
-        // words still hit ("iph" → "iPhone"). $text only matches whole words.
-        const qEsc = String(q)
-          .trim()
-          .slice(0, 200)
-          .replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const qEsc = esc(clean);
         filter.$or = [
           { title: { $regex: qEsc, $options: "i" } },
           { department: { $regex: qEsc, $options: "i" } },
         ];
       } else {
-        // Use the pre-built text index (title + description + ingredients.inciName)
-        // for O(log n) lookup — regex does a full O(n) collection scan.
-        // Input capped at 200 chars; $text is injection-safe.
-        filter.$text = { $search: String(q).slice(0, 200) };
+        // Full search: split into whitespace-separated tokens and require every
+        // token to match at least one field. This keeps multi-word queries
+        // precise ("iphone 15" needs both) while still matching partial tokens.
+        const fields = ["title", "department", "sku", "barcode", "slug", "description"];
+        const tokens = clean.split(/\s+/).filter(Boolean);
+        const perToken = (tok) => ({
+          $or: fields.map((f) => ({ [f]: { $regex: esc(tok), $options: "i" } })),
+        });
+        if (tokens.length === 1) filter.$or = perToken(tokens[0]).$or;
+        else if (tokens.length > 1) filter.$and = tokens.map(perToken);
       }
     }
 
@@ -200,11 +207,7 @@ router.get("/", async (req, res) => {
       priceHigh: { price: -1, _id: -1 },
       priceLow: { price: 1, _id: 1 },
     };
-    let sortBy = sortMap[sort] || sortMap.position;
-    // When text search is active and no explicit sort was requested, rank by
-    // relevance score rather than recency so the best matches surface first.
-    if (q && !suggest && sort === "position")
-      sortBy = { score: { $meta: "textScore" } };
+    const sortBy = sortMap[sort] || sortMap.position;
 
     // Try cache
     const cacheKey = `products:${Buffer.from(JSON.stringify(req.query || {})).toString("base64")}`;

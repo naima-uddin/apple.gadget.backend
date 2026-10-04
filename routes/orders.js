@@ -1076,8 +1076,11 @@ router.post("/payment/success", async (req, res) => {
         }
         // ──────────────────────────────────────────────────────────────
 
+        // Payment success only records that money was received — it must NOT
+        // advance the order status. The order stays "pending" until an
+        // authorized admin/moderator changes it manually
+        // (PUT /api/admin/orders/:id/status). No automatic confirmation.
         await Order.findByIdAndUpdate(tran_id, {
-          status: "processing",
           paymentStatus: "paid",
           valId: val_id,
           paidAmount: paidAmt,
@@ -1160,8 +1163,9 @@ router.post("/payment/ipn", async (req, res) => {
         if (order && order.paymentStatus !== "paid") {
           const paidAmt = parseFloat(validation.amount || amount || 0);
           if (Math.abs(paidAmt - order.total) <= 1) {
+            // Record payment only — never auto-advance the order status.
+            // It stays "pending" until an authorized admin changes it manually.
             await Order.findByIdAndUpdate(tran_id, {
-              status: "processing",
               paymentStatus: "paid",
               valId: val_id,
               paidAmount: paidAmt,

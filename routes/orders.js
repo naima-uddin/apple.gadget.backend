@@ -894,6 +894,13 @@ router.post("/", orderLimiter, async (req, res) => {
       rewardPointsRedeemed: pointsRedeemed || 0,
       rewardPointsDiscount: pointsDiscount || 0,
       status: "pending",
+      // Customers may self-edit/cancel a COD order for 1 hour after placing it.
+      // This is purely the edit/cancel deadline — it does NOT auto-confirm or
+      // otherwise change the order status when it elapses.
+      confirmAfter:
+        paymentMethod === "cash-on-delivery"
+          ? new Date(Date.now() + 60 * 60 * 1000)
+          : null,
       paymentStatus: ["cash-on-delivery", "bkash", "nagad", "rocket"].includes(
         paymentMethod,
       )
@@ -945,6 +952,7 @@ router.post("/", orderLimiter, async (req, res) => {
       return res.json({
         ok: true,
         orderId: order._id.toString(),
+        orderNumber: order.orderNumber || null,
         method: "cod",
       });
     }
@@ -1613,7 +1621,9 @@ router.get("/track", async (req, res) => {
 // ── GET /api/orders/:id ───────────────────────────────────────────────────────
 router.get("/:id", async (req, res) => {
   try {
-    const order = await Order.findById(req.params.id);
+    // Accept either the raw ObjectId or the human-friendly order number
+    // (e.g. "apl0023"), so the public confirmation URL can use the clean id.
+    const order = await findOrderByIdOrSuffix(req.params.id);
     if (!order) return res.status(404).json({ error: "Order not found" });
 
     const identity = await getRequesterIdentity(req);
@@ -1670,7 +1680,7 @@ router.patch("/:id/cancel", async (req, res) => {
     const identity = await getRequesterIdentity(req);
     if (!identity) return res.status(401).json({ error: "Not authenticated" });
 
-    const order = await Order.findById(req.params.id);
+    const order = await findOrderByIdOrSuffix(req.params.id);
     if (!order) return res.status(404).json({ error: "Order not found" });
 
     if (!ownsOrder(order, identity))
@@ -1684,6 +1694,14 @@ router.patch("/:id/cancel", async (req, res) => {
     if (order.status !== "pending") {
       return res.status(400).json({
         error: `Order is already ${order.status} and cannot be cancelled.`,
+      });
+    }
+    const editCancelDeadline = order.confirmAfter
+      ? new Date(order.confirmAfter).getTime()
+      : new Date(order.createdAt).getTime() + 60 * 60 * 1000;
+    if (Date.now() > editCancelDeadline) {
+      return res.status(400).json({
+        error: "The 1-hour edit/cancel window has passed for this order.",
       });
     }
 
@@ -1717,13 +1735,13 @@ router.patch("/:id/cancel", async (req, res) => {
 });
 
 // ── PATCH /api/orders/:id/edit ────────────────────────────────────────────────
-// Edit the delivery note / address of a pending COD order within 30 minutes.
+// Edit a pending COD order within the 1-hour edit/cancel window.
 router.patch("/:id/edit", async (req, res) => {
   try {
     const identity = await getRequesterIdentity(req);
     if (!identity) return res.status(401).json({ error: "Not authenticated" });
 
-    const order = await Order.findById(req.params.id);
+    const order = await findOrderByIdOrSuffix(req.params.id);
     if (!order) return res.status(404).json({ error: "Order not found" });
 
     if (!ownsOrder(order, identity))
@@ -1732,6 +1750,14 @@ router.patch("/:id/edit", async (req, res) => {
     if (order.status !== "pending") {
       return res.status(400).json({
         error: `Order is already ${order.status} and cannot be edited.`,
+      });
+    }
+    const editCancelDeadline = order.confirmAfter
+      ? new Date(order.confirmAfter).getTime()
+      : new Date(order.createdAt).getTime() + 60 * 60 * 1000;
+    if (Date.now() > editCancelDeadline) {
+      return res.status(400).json({
+        error: "The 1-hour edit/cancel window has passed for this order.",
       });
     }
 

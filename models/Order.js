@@ -231,7 +231,9 @@ const OrderSchema = new mongoose.Schema({
   paymentNote: { type: String, default: null },
   valId: { type: String, default: null },
   paidAmount: { type: Number, default: null },
-  // COD orders auto-confirm 30 min after creation; cancellable before this time
+  // Deadline for the customer's self edit/cancel window (COD = 1 hour after
+  // creation). Purely informational — it does NOT auto-confirm; the order stays
+  // "pending" until staff change it. After this time edit/cancel is rejected.
   confirmAfter: { type: Date, default: null },
   shipment: { type: ShipmentSchema, default: () => ({ trackingEvents: [] }) },
   assignedAgent: { type: AssignedAgentSchema, default: null },

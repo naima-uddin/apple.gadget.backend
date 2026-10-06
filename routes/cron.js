@@ -118,4 +118,64 @@ router.all("/shipment-sync", async (req, res) => {
   }
 });
 
+// One-off (safe to repeat) optimizer for the local public/uploads images. For
+// hosts where only the running backend can reach the uploads disk (no SSH), this
+// does what scripts/recompressUploads.js does over the wire. Already protected
+// by requireCronSecret above.
+//
+// DEFAULTS TO DRY-RUN: without ?apply=true it only reports what would change and
+// writes nothing, so an accidental hit (e.g. a GET) can never mutate files.
+// Backups (<file>.orig) are on by default; pass ?backup=false to skip them.
+//   Preview : .../api/cron/recompress-uploads?secret=XXX
+//   Apply   : .../api/cron/recompress-uploads?secret=XXX&apply=true
+router.all("/recompress-uploads", async (req, res) => {
+  const p = { ...req.query, ...(req.body || {}) };
+  const dryRun = String(p.apply) !== "true";
+  const backup = String(p.backup) !== "false";
+  try {
+    const { recompressUploads } = await import("../lib/recompressUploads.js");
+    const lines = [];
+    const stats = await recompressUploads({
+      dryRun,
+      backup,
+      quality: p.quality ? Number(p.quality) : undefined,
+      minSavings: p.minSavings ? Number(p.minSavings) : undefined,
+      maxWidth: p.maxWidth ? Number(p.maxWidth) : undefined,
+      // Keep the response bounded — collect at most the first 200 lines.
+      log: (line) => {
+        if (lines.length < 200) lines.push(line);
+      },
+    });
+    logger.info(
+      {
+        dryRun,
+        rewritten: stats.rewritten,
+        savedMB: +(stats.savedBytes / 1048576).toFixed(2),
+      },
+      "Recompress uploads run",
+    );
+    res.json({
+      ok: true,
+      dryRun,
+      note: dryRun
+        ? "Dry-run only — nothing changed. Add &apply=true to apply."
+        : "Applied. Images re-compressed in place.",
+      summary: {
+        scanned: stats.scanned,
+        rewritten: stats.rewritten,
+        skippedSmall: stats.skippedSmall,
+        skippedNonImage: stats.skippedNonImage,
+        failed: stats.failed,
+        beforeMB: +(stats.beforeBytes / 1048576).toFixed(2),
+        afterMB: +(stats.afterBytes / 1048576).toFixed(2),
+        savedMB: +(stats.savedBytes / 1048576).toFixed(2),
+      },
+      sample: lines,
+    });
+  } catch (err) {
+    logger.error({ err }, "Recompress uploads cron failed");
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
 export default router;

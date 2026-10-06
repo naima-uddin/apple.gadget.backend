@@ -1647,7 +1647,14 @@ router.get("/:id", async (req, res) => {
         title: i.title,
         quantity: i.quantity,
         price: i.price,
+        image: i.image || null,
+        color: i.color ?? null,
+        size: i.size ?? null,
+        attributes: i.attributes || undefined,
+        attrGroup: i.attrGroup ?? null,
+        attrValue: i.attrValue ?? null,
       })),
+      confirmAfter: order.confirmAfter || null,
       createdAt: order.createdAt,
     };
     res.json({ order: publicOrder });

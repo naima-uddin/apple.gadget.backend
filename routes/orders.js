@@ -569,6 +569,48 @@ const getRequesterIdentity = async (req) => {
   }
 };
 
+// ── Guest order-access grant ────────────────────────────────────────────────
+// Guests (no login) still need to view the full confirmation and self-edit/
+// cancel the order they just placed, without exposing name/phone/address to any
+// stranger who merely guesses the order id. On creation we set an httpOnly,
+// signed cookie listing the order ids this browser is allowed to access. It is
+// scoped to those ids only (not a login), and expires after the edit window.
+const ORDER_GRANT_COOKIE = "orderGrant";
+const ORDER_GRANT_TTL_MS = 2 * 60 * 60 * 1000; // 2h — covers the 1h edit window
+
+// Read the set of order ids this browser has been granted access to.
+const getGrantedOrderIds = (req) => {
+  const raw = req.cookies?.[ORDER_GRANT_COOKIE];
+  if (!raw) return [];
+  try {
+    const payload = jwt.verify(raw, process.env.JWT_SECRET);
+    return Array.isArray(payload?.oids) ? payload.oids.map(String) : [];
+  } catch {
+    return [];
+  }
+};
+
+const hasOrderGrant = (req, order) => {
+  if (!order) return false;
+  return getGrantedOrderIds(req).includes(String(order._id));
+};
+
+// Append the just-placed order id to the grant cookie (keeping recent grants so
+// a buyer who places several orders can still edit each one's confirmation).
+const grantOrderAccess = (req, res, orderId) => {
+  const existing = getGrantedOrderIds(req);
+  const oids = [...new Set([String(orderId), ...existing])].slice(0, 10);
+  const token = jwt.sign({ oids }, process.env.JWT_SECRET, {
+    expiresIn: Math.floor(ORDER_GRANT_TTL_MS / 1000),
+  });
+  res.cookie(ORDER_GRANT_COOKIE, token, {
+    httpOnly: true,
+    sameSite: "none",
+    secure: true,
+    maxAge: ORDER_GRANT_TTL_MS,
+  });
+};
+
 const ownsOrder = (order, identity) => {
   if (!order || !identity) return false;
 
@@ -915,6 +957,10 @@ router.post("/", orderLimiter, async (req, res) => {
     });
 
     await order.save();
+
+    // Grant this browser access to its own order (view full confirmation +
+    // self-edit/cancel) even when checking out as a guest.
+    grantOrderAccess(req, res, order._id);
 
     // Mark any open checkout sessions for this user as completed
     if (resolvedUserId) {
@@ -1635,7 +1681,7 @@ router.get("/:id", async (req, res) => {
       return res.status(404).json({ error: "Order not found" });
     }
 
-    if (isAdmin || isOwner) {
+    if (isAdmin || isOwner || hasOrderGrant(req, order)) {
       return res.json({ order });
     }
 
@@ -1677,13 +1723,13 @@ router.get("/:id", async (req, res) => {
 // Cancel a COD order within 1 hour of creation. Requires a reason (min 5 chars).
 router.patch("/:id/cancel", async (req, res) => {
   try {
-    const identity = await getRequesterIdentity(req);
-    if (!identity) return res.status(401).json({ error: "Not authenticated" });
-
     const order = await findOrderByIdOrSuffix(req.params.id);
     if (!order) return res.status(404).json({ error: "Order not found" });
 
-    if (!ownsOrder(order, identity))
+    // Allow the logged-in owner OR the guest browser that placed this order
+    // (grant cookie set at creation) to cancel within the window.
+    const identity = await getRequesterIdentity(req);
+    if (!ownsOrder(order, identity) && !hasOrderGrant(req, order))
       return res.status(403).json({ error: "Not your order" });
 
     if (order.paymentMethod !== "cash-on-delivery") {
@@ -1738,13 +1784,13 @@ router.patch("/:id/cancel", async (req, res) => {
 // Edit a pending COD order within the 1-hour edit/cancel window.
 router.patch("/:id/edit", async (req, res) => {
   try {
-    const identity = await getRequesterIdentity(req);
-    if (!identity) return res.status(401).json({ error: "Not authenticated" });
-
     const order = await findOrderByIdOrSuffix(req.params.id);
     if (!order) return res.status(404).json({ error: "Order not found" });
 
-    if (!ownsOrder(order, identity))
+    // Allow the logged-in owner OR the guest browser that placed this order
+    // (grant cookie set at creation) to edit within the window.
+    const identity = await getRequesterIdentity(req);
+    if (!ownsOrder(order, identity) && !hasOrderGrant(req, order))
       return res.status(403).json({ error: "Not your order" });
 
     if (order.status !== "pending") {

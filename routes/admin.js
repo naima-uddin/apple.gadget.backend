@@ -31,6 +31,7 @@ import Variation from "../models/Variation.js";
 import BlogPost from "../models/BlogPost.js";
 import BlogCategory from "../models/BlogCategory.js";
 import Order from "../models/Order.js";
+import Subscriber from "../models/Subscriber.js";
 import Courier from "../models/Courier.js";
 import TimelinePreset from "../models/TimelinePreset.js";
 import {
@@ -2919,6 +2920,23 @@ router.get(
         .limit(Number(limit))
         .lean();
 
+      // Newsletter signups from the public storefront (footer/hero) land in the
+      // separate Subscriber collection — they do NOT flip the User's
+      // `newsletterSubscribed` flag. Cross-reference by email so a customer who
+      // subscribed with just their email still shows as "Subscribed" here.
+      const emails = users.map((u) => u.email).filter(Boolean);
+      const subscribedEmails = new Set(
+        (
+          await Subscriber.find({ email: { $in: emails } })
+            .select("email")
+            .lean()
+        ).map((s) => s.email),
+      );
+      users.forEach((u) => {
+        if (u.email && subscribedEmails.has(u.email))
+          u.newsletterSubscribed = true;
+      });
+
       let items = users;
       if (includeStats === "1" || includeStats === "true") {
         items = await Promise.all(
@@ -2950,8 +2968,15 @@ router.get(
     try {
       const u = await User.findById(req.params.id)
         .select("-hashedPassword -resetToken -resetExpires")
-        .populate("tags");
+        .populate("tags")
+        .lean();
       if (!u) return res.status(404).json({ error: "Not found" });
+      // Reflect public-storefront newsletter signups (Subscriber collection),
+      // matching the list endpoint's cross-reference.
+      if (!u.newsletterSubscribed && u.email) {
+        const sub = await Subscriber.exists({ email: u.email });
+        if (sub) u.newsletterSubscribed = true;
+      }
       res.json({ user: u });
     } catch (err) {
       res.status(500).json({ error: "Server error" });

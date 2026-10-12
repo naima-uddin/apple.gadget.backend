@@ -125,8 +125,13 @@ router.get("/", async (req, res) => {
       // for both autocomplete (suggest) and full search.
       const clean = String(q).trim().slice(0, 200);
       const esc = (s) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      // Anchor to a word boundary so a token matches at the START of a word
+      // ("dj" → "DJ01", "iph" → "iPhone") but NOT mid-word ("dj" must not hit
+      // "a-dj-ust" / "adjustable" inside a description). This is what was
+      // pulling unrelated products into results.
+      const wb = (tok) => `\\b${esc(tok)}`;
       if (suggest) {
-        const qEsc = esc(clean);
+        const qEsc = wb(clean);
         filter.$or = [
           { title: { $regex: qEsc, $options: "i" } },
           { department: { $regex: qEsc, $options: "i" } },
@@ -135,10 +140,14 @@ router.get("/", async (req, res) => {
         // Full search: split into whitespace-separated tokens and require every
         // token to match at least one field. This keeps multi-word queries
         // precise ("iphone 15" needs both) while still matching partial tokens.
-        const fields = ["title", "department", "sku", "barcode", "slug", "description"];
+        // NOTE: description is intentionally excluded. Matching it pulls in
+        // unrelated accessories that merely MENTION the term (e.g. a power
+        // adapter whose description says "charges your Apple Watch" showing up
+        // for a "watch" search). Search name/brand/identifiers only.
+        const fields = ["title", "department", "sku", "barcode", "slug"];
         const tokens = clean.split(/\s+/).filter(Boolean);
         const perToken = (tok) => ({
-          $or: fields.map((f) => ({ [f]: { $regex: esc(tok), $options: "i" } })),
+          $or: fields.map((f) => ({ [f]: { $regex: wb(tok), $options: "i" } })),
         });
         if (tokens.length === 1) filter.$or = perToken(tokens[0]).$or;
         else if (tokens.length > 1) filter.$and = tokens.map(perToken);

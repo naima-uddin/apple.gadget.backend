@@ -7,10 +7,7 @@
   "scripts": {
     "start": "node index.js",
     "dev": "nodemon index.js",
-    "seed": "node seed.js",
-    "seed:admin": "node seedAdmin.js",
-    "migrate:remove-colors-sizes": "node migrate-remove-colors-sizes.js",
-    "migrate:products": "node scripts/migrateProducts.js"
+    "seed:admin": "node seedAdmin.js"
   },
   "dependencies": {
     "bcrypt": "^5.1.0",

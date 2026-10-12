@@ -7,8 +7,15 @@
  *   node seedAdmin.js <email> <password> [name]
  *   node seedAdmin.js admin@example.com StrongPass123 "Super Admin"
  *
+ * Add --super to create (or promote to) a HIDDEN owner/root account:
+ *   node seedAdmin.js owner@example.com StrongPass123 "Owner" --super
+ * A superAdmin has full access but never appears in the Authorized-admins
+ * list and leaves no staff-visible audit trail (product activity log, order
+ * status history / "edited by", order pick). See models/Admin.js.
+ *
  * If an admin with the same email already exists, its password/name are
- * updated (handy for password resets) — nothing else is touched.
+ * updated (handy for password resets) — nothing else is touched (except the
+ * superAdmin flag is set when --super is passed).
  */
 
 import mongoose from "mongoose";
@@ -19,10 +26,14 @@ dotenv.config();
 const SALT_ROUNDS = 12; // keep in sync with routes/admin.js
 
 async function main() {
-  const [email, password, name] = process.argv.slice(2);
+  const args = process.argv.slice(2);
+  const isSuper = args.includes("--super");
+  const [email, password, name] = args.filter((a) => a !== "--super");
 
   if (!email || !password) {
-    console.log("Usage: node seedAdmin.js <email> <password> [name]");
+    console.log(
+      "Usage: node seedAdmin.js <email> <password> [name] [--super]",
+    );
     process.exit(1);
   }
   if (password.length < 6) {
@@ -50,8 +61,16 @@ async function main() {
     existing.isLocked = false;
     existing.lockUntil = undefined;
     existing.loginAttempts = 0;
+    if (isSuper) {
+      existing.role = "admin";
+      existing.permissions = [];
+      existing.superAdmin = true;
+    }
     await existing.save();
-    console.log(`Updated existing admin: ${existing.email} (${existing.role})`);
+    console.log(
+      `Updated existing admin: ${existing.email} (${existing.role})` +
+        (existing.superAdmin ? " [hidden super admin]" : ""),
+    );
   } else {
     const admin = await Admin.create({
       name: name || "Admin",
@@ -60,8 +79,12 @@ async function main() {
       role: "admin",
       isActive: true,
       permissions: [], // empty = unrestricted / full access
+      superAdmin: isSuper,
     });
-    console.log(`Created new admin: ${admin.email}`);
+    console.log(
+      `Created new admin: ${admin.email}` +
+        (admin.superAdmin ? " [hidden super admin]" : ""),
+    );
   }
 
   await mongoose.disconnect();

